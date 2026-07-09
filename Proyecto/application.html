@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Regístrate en el banco de talento de Nexova. Profesionales interesados en oportunidades laborales en tecnología, retail y finanzas.">
+  <title>Registro de Talento — Nexova</title>
+  <link rel="canonical" href="https://nexova.com/application.html">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="font-sans text-slate-800 bg-slate-50 antialiased min-h-screen flex flex-col">
+  <a href="#formulario-talento" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-nexova-700 focus:text-white focus:rounded-md">
+    Saltar al formulario
+  </a>
+
+  <header class="bg-white border-b border-slate-200" role="banner">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-2 group" aria-label="Nexova — Volver al inicio">
+        <svg class="w-8 h-8 text-nexova-600" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="40" height="40" rx="8" fill="currentColor" fill-opacity="0.1"/>
+          <path d="M10 28V12h4.5l5.5 9.5L25.5 12H30v16h-3.5V18l-5.5 9.5h-2L13.5 18v10H10z" fill="currentColor"/>
+        </svg>
+        <span class="text-lg font-bold text-nexova-900 group-hover:text-nexova-600 transition-colors">Nexova</span>
+      </a>
+      <a href="index.html" class="text-sm font-medium text-nexova-600 hover:text-nexova-800 focus:outline-none focus:underline">
+        &larr; Volver al inicio
+      </a>
+    </div>
+  </header>
+
+  <main class="flex-1 py-8 sm:py-12 lg:py-16">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6">
+      <header class="text-center mb-8 sm:mb-10">
+        <h1 class="text-2xl sm:text-3xl font-bold text-nexova-900">Banco de talento Nexova</h1>
+        <p class="mt-3 text-slate-600 max-w-xl mx-auto">
+          Completa el formulario para registrarte como candidato. Nuestro equipo de selección revisará tu perfil para oportunidades actuales y futuras.
+        </p>
+      </header>
+
+      <aside class="mb-8 p-4 sm:p-5 bg-amber-50 border border-amber-200 rounded-xl" role="note" aria-label="Información para empresas">
+        <p class="text-sm text-amber-900">
+          <strong>¿Eres una empresa buscando talento?</strong> Escríbenos a
+          <a href="mailto:contacto@nexova.com" class="font-semibold text-amber-800 underline hover:text-amber-950 focus:outline-none focus:ring-2 focus:ring-amber-500 rounded">contacto@nexova.com</a>
+        </p>
+      </aside>
+
+      <div id="mensaje-exito" class="hidden mb-8 p-6 sm:p-8 bg-green-50 border border-green-200 rounded-2xl" role="alert" aria-live="polite">
+        <div class="flex gap-4">
+          <div class="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-green-100 text-green-600 rounded-full" aria-hidden="true">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-lg font-bold text-green-900">¡Gracias por tu interés en Nexova!</h2>
+            <p class="mt-2 text-green-800">
+              Hemos recibido tu información. Nuestro equipo de selección la revisará y te contactaremos en caso de que tu perfil encaje con alguna de nuestras oportunidades actuales o futuras.
+            </p>
+            <p class="mt-3 text-green-800">
+              Mientras tanto, síguenos en
+              <a href="https://linkedin.com/company/nexova" class="font-semibold underline hover:text-green-950 focus:outline-none focus:ring-2 focus:ring-green-500 rounded" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+              para estar al día de nuestras vacantes y contenido sobre desarrollo profesional.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <form id="formulario-talento" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 lg:p-10 space-y-8" novalidate aria-label="Formulario de registro de talento">
+
+        <fieldset class="space-y-5">
+          <legend class="text-lg font-semibold text-nexova-900 pb-2 border-b border-slate-200 w-full">Datos personales</legend>
+
+          <div>
+            <label for="nombre-completo" class="block text-sm font-medium text-slate-700 mb-1">
+              Nombre completo <span class="text-red-600" aria-hidden="true">*</span>
+            </label>
+            <input
+              type="text"
+              id="nombre-completo"
+              name="nombre-completo"
+              required
+              autocomplete="name"
+              class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-nexova-500 focus:border-nexova-500 transition-colors"
+              placeholder="Ej: María García López"
+              aria-describedby="error-nombre-completo"
+              aria-invalid="false"
+            >
+            <p id="error-nombre-completo" class="hidden mt-1.5 text-sm text-red-600" role="alert"></p>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-5">
+            <div>
+              <label for="correo-electronico" class="block text-sm font-medium text-slate-700 mb-1">
+                Correo electrónico <span class="text-red-600" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="email"
+                id="correo-electronico"
+                name="correo-electronico"
+                required
+                autocomplete="email"
+                class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-nexova-500 focus:border-nexova-500 transition-colors"
+                placeholder="nombre@empresa.com"
+                aria-describedby="error-correo-electronico"
+                aria-invalid="false"
+              >
+              <p id="error-correo-electronico" class="hidden mt-1.5 text-sm text-red-600" role="alert"></p>
+            </div>
+
+            <div>
+              <label for="telefono" class="block text-sm font-medium text-slate-700 mb-1">
+                Teléfono <span class="text-red-600" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="tel"
+                id="telefono"
+                name="telefono"
+                required
+                autocomplete="tel"
+                class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-nexova-500 focus:border-nexova-500 transition-colors"
+                placeholder="+34 612 345 678"
+                aria-describedby="error-telefono"
+                aria-invalid="false"
+              >
+              <p id="error-telefono" class="hidden mt-1.5 text-sm text-red-600" role="alert"></p>
+            </div>
+          </div>
+
+          <div>
+            <label for="pais-residencia" class="block text-sm font-medium text-slate-700 mb-1">
+              País de residencia <span class="text-red-600" aria-hidden="true">*</span>
+            </label>
+            <select
+              id="pais-residencia"
+              name="pais-residencia"
+              required
+              class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-nexova-500 focus:border-nexova-500 transition-colors"
+              aria-describedby="error-pais-residencia"
+              aria-invalid="false"
+            >
+              <option value="">Selecciona un país</option>
+              <option value="España">España</option>
+              <option value="Estados Unidos">Estados Unidos</option>
+              <option value="Otro">Otro</option>
+            </select>
+            <p id="error-pais-residencia" class="hidden mt-1.5 text-sm text-red-600" role="alert"></p>
+          </div>
+        </fieldset>
+
+        <fieldset class="space-y-5">
+          <legend class="text-lg font-semibold text-nexova-900 pb-2 border-b border-slate-200 w-full">Experiencia profesional</legend>
+
+          <div class="grid sm:grid-cols-2 gap-5">
+            <div>
+              <label for="anos-experiencia" class="block text-sm font-medium text-slate-700 mb-1">
+                Años de experiencia <span class="text-red-600" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="number"
+                id="anos-experiencia"
+                name="anos-experiencia"
+                required
+                min="0"
+                max="50"
+                step="1"
+                class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-nexova-500 focus:border-nexova-500 transition-colors"
+                placeholder="0"
+                aria-describedby="error-anos-experiencia"
+                aria-invalid="false"
+              >
+              <p id="error-anos-experiencia" class="hidden mt-1.5 text-sm text-red-600" role="alert"></p>
+            </div>
+
+            <div>
+              <label for="sector-interes" class="block text-sm font-medium text-slate-700 mb-1">
+                Sector de interés <span class="text-red-600" aria-hidden="true">*</span>
+              </label>
+              <select
+                id="sector-interes"
+                name="sector-interes"
+                required
+                class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-nexova-500 focus:border-nexova-500 transition-colors"
+                aria-describedby="error-sector-interes"
+                aria-invalid="false"
+              >
+                <option value="">Selecciona un sector</option>
+                <option value="Tecnología">Tecnología</option>
+                <option value="Retail">Retail</option>
+                <option value="Servicios Financieros">Servicios Financieros</option>
+                <option value="Consultoría">Consultoría</option>
+                <option value="Otro">Otro</option>
+              </select>
+              <p id="error-sector-interes" class="hidden mt-1.5 text-sm text-red-600" role="alert"></p>
+            </div>
+          </div>
+
+          <div>
+            <label for="nivel-ingles" class="block text-sm font-medium text-slate-700 mb-1">
+              Nivel de inglés <span class="text-red-600" aria-hidden="true">*</span>
+            </label>
+            <select
+              id="nivel-ingles"
+              name="nivel-ingles"
+              required
+              class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-nexova-500 focus:border-nexova-500 transition-colors"
+              aria-describedby="error-nivel-ingles"
+              aria-invalid="false"
+            >
+              <option value="">Selecciona tu nivel</option>
+              <option value="Básico">Básico</option>
+              <option value="Intermedio">Intermedio</option>
+              <option value="Avanzado">Avanzado</option>
+              <option value="Nativo">Nativo</option>
+            </select>
+            <p id="error-nivel-ingles" class="hidden mt-1.5 text-sm text-red-600" role="alert"></p>
+          </div>
+
+          <fieldset>
+            <legend class="block text-sm font-medium text-slate-700 mb-3">
+              Disponibilidad <span class="text-red-600" aria-hidden="true">*</span>
+            </legend>
+            <div id="disponibilidad" class="grid sm:grid-cols-2 gap-3" role="radiogroup" aria-describedby="error-disponibilidad" aria-invalid="false">
+              <label class="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 has-[:checked]:border-nexova-500 has-[:checked]:bg-nexova-50 transition-colors">
+                <input type="radio" id="disponibilidad-inmediata" name="disponibilidad" value="Inmediata" required class="w-4 h-4 text-nexova-600 border-slate-300 focus:ring-nexova-500">
+                <span class="text-sm text-slate-700">Inmediata</span>
+              </label>
+              <label class="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 has-[:checked]:border-nexova-500 has-[:checked]:bg-nexova-50 transition-colors">
+                <input type="radio" id="disponibilidad-1-mes" name="disponibilidad" value="1 mes" class="w-4 h-4 text-nexova-600 border-slate-300 focus:ring-nexova-500">
+                <span class="text-sm text-slate-700">1 mes</span>
+              </label>
+              <label class="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 has-[:checked]:border-nexova-500 has-[:checked]:bg-nexova-50 transition-colors">
+                <input type="radio" id="disponibilidad-2-3-meses" name="disponibilidad" value="2-3 meses" class="w-4 h-4 text-nexova-600 border-slate-300 focus:ring-nexova-500">
+                <span class="text-sm text-slate-700">2-3 meses</span>
+              </label>
+              <label class="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 has-[:checked]:border-nexova-500 has-[:checked]:bg-nexova-50 transition-colors">
+                <input type="radio" id="disponibilidad-explorando" name="disponibilidad" value="Solo explorando" class="w-4 h-4 text-nexova-600 border-slate-300 focus:ring-nexova-500">
+                <span class="text-sm text-slate-700">Solo explorando</span>
+              </label>
+            </div>
+            <p id="error-disponibilidad" class="hidden mt-1.5 text-sm text-red-600" role="alert"></p>
+          </fieldset>
+        </fieldset>
+
+        <fieldset class="space-y-5">
+          <legend class="text-lg font-semibold text-nexova-900 pb-2 border-b border-slate-200 w-full">Información adicional</legend>
+
+          <div>
+            <label for="linkedin-url" class="block text-sm font-medium text-slate-700 mb-1">
+              LinkedIn (URL del perfil)
+            </label>
+            <input
+              type="url"
+              id="linkedin-url"
+              name="linkedin-url"
+              class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-nexova-500 focus:border-nexova-500 transition-colors"
+              placeholder="https://linkedin.com/in/tu-perfil"
+              aria-describedby="error-linkedin-url"
+              aria-invalid="false"
+            >
+            <p id="error-linkedin-url" class="hidden mt-1.5 text-sm text-red-600" role="alert"></p>
+          </div>
+
+          <div>
+            <label for="comentarios-adicionales" class="block text-sm font-medium text-slate-700 mb-1">
+              Comentarios adicionales
+            </label>
+            <textarea
+              id="comentarios-adicionales"
+              name="comentarios-adicionales"
+              rows="4"
+              maxlength="500"
+              class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-nexova-500 focus:border-nexova-500 transition-colors resize-y min-h-[100px]"
+              placeholder="Cuéntanos brevemente sobre tu experiencia o intereses profesionales..."
+              aria-describedby="contador-comentarios error-comentarios-adicionales"
+              aria-invalid="false"
+            ></textarea>
+            <div class="flex justify-between items-center mt-1">
+              <p id="error-comentarios-adicionales" class="hidden text-sm text-red-600" role="alert"></p>
+              <p id="contador-comentarios" class="text-sm text-slate-500 ml-auto" aria-live="polite">0 / 500 caracteres</p>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend class="sr-only">Consentimiento</legend>
+          <div class="flex items-start gap-3">
+            <input
+              type="checkbox"
+              id="acepto-politica-datos"
+              name="acepto-politica-datos"
+              required
+              class="mt-1 w-4 h-4 text-nexova-600 border-slate-300 rounded focus:ring-nexova-500"
+              aria-describedby="error-acepto-politica-datos"
+              aria-invalid="false"
+            >
+            <label for="acepto-politica-datos" class="text-sm text-slate-700">
+              Acepto la política de tratamiento de datos personales <span class="text-red-600" aria-hidden="true">*</span>
+            </label>
+          </div>
+          <p id="error-acepto-politica-datos" class="hidden mt-1.5 text-sm text-red-600" role="alert"></p>
+        </fieldset>
+
+        <div class="flex flex-col sm:flex-row gap-3 pt-2">
+          <button
+            type="submit"
+            class="flex-1 sm:flex-none px-8 py-3 text-base font-semibold text-white bg-nexova-600 rounded-lg hover:bg-nexova-700 focus:outline-none focus:ring-2 focus:ring-nexova-500 focus:ring-offset-2 transition-colors"
+          >
+            Enviar aplicación
+          </button>
+          <button
+            type="reset"
+            id="btn-limpiar"
+            class="flex-1 sm:flex-none px-8 py-3 text-base font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-nexova-500 focus:ring-offset-2 transition-colors"
+          >
+            Limpiar formulario
+          </button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <footer class="bg-nexova-950 text-nexova-300 py-8 mt-auto" role="contentinfo">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 text-center sm:text-left space-y-3">
+      <address class="not-italic text-sm space-y-1">
+        <p><a href="mailto:contacto@nexova.com" class="hover:text-white focus:outline-none focus:underline">contacto@nexova.com</a></p>
+        <p>Valencia: <a href="tel:+34960123456" class="hover:text-white focus:outline-none focus:underline">+34 960 123 456</a> · Miami: <a href="tel:+13055550191" class="hover:text-white focus:outline-none focus:underline">+1 305 555 0191</a></p>
+      </address>
+      <p class="text-sm">&copy; 2025 Nexova. Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
+  <script src="validation.js"></script>
+</body>
+</html>
