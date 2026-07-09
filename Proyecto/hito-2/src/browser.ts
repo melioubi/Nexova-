@@ -33,8 +33,8 @@ function inicializarEventos(): void {
     const pais = paisesValidos.find((item) => item === paisValor);
 
     const filtrados = filtrarPorCriterios(registrosTalentoDemo, {
-      ...(sector ? { sectorInteres: sector } : {}),
-      ...(pais ? { paisResidencia: pais } : {}),
+      ...(sector ? { 'Sector de interés': sector } : {}),
+      ...(pais ? { 'País de residencia': pais } : {}),
     });
 
     renderJSON(filtrados);
@@ -42,20 +42,20 @@ function inicializarEventos(): void {
 
   btnOrdenar?.addEventListener('click', () => {
     const orden = (document.getElementById('orden-experiencia') as HTMLSelectElement | null)?.value === 'desc' ? 'desc' : 'asc';
-    renderJSON(ordenarPorCampo(registrosTalentoDemo, 'anosExperiencia', orden));
+    renderJSON(ordenarPorCampo(registrosTalentoDemo, 'Años de experiencia', orden));
   });
 
   btnOrdenarMultiple?.addEventListener('click', () => {
     const resultado = ordenarPorMultiplesCampos(registrosTalentoDemo, [
-      { campo: 'sectorInteres', orden: 'asc' },
-      { campo: 'anosExperiencia', orden: 'desc' },
+      { campo: 'Sector de interés', orden: 'asc' },
+      { campo: 'Años de experiencia', orden: 'desc' },
     ]);
     renderJSON(resultado);
   });
 
   btnBusquedaLineal?.addEventListener('click', () => {
     const correo = (document.getElementById('input-correo') as HTMLInputElement | null)?.value?.trim() ?? '';
-    const indice = busquedaLineal(registrosTalentoDemo, (item) => item.correoElectronico === correo);
+    const indice = busquedaLineal(registrosTalentoDemo, (item) => item['Correo electrónico'] === correo);
 
     renderJSON({
       correo,
@@ -67,12 +67,12 @@ function inicializarEventos(): void {
   btnBusquedaBinaria?.addEventListener('click', () => {
     const valorInput = (document.getElementById('input-anos') as HTMLInputElement | null)?.value ?? '';
     const anos = Number(valorInput);
-    const ordenados = ordenarPorCampo(registrosTalentoDemo, 'anosExperiencia', 'asc');
+    const ordenados = ordenarPorCampo(registrosTalentoDemo, 'Años de experiencia', 'asc');
 
     const indice = busquedaBinaria(
       ordenados,
-      { ...ordenados[0], anosExperiencia: anos },
-      (a, b) => a.anosExperiencia - b.anosExperiencia,
+      { ...ordenados[0], 'Años de experiencia': anos },
+      (a, b) => a['Años de experiencia'] - b['Años de experiencia'],
     );
 
     renderJSON({
@@ -89,19 +89,17 @@ function inicializarEventos(): void {
 
   btnValidar?.addEventListener('click', () => {
     const registroInvalido = {
-      id: 'REG-INVALIDO',
-      nombreCompleto: 'Nombre',
-      correoElectronico: 'correo-sin-formato',
-      telefono: '999',
-      paisResidencia: undefined,
-      anosExperiencia: 70,
-      sectorInteres: undefined,
-      nivelIngles: undefined,
-      disponibilidad: undefined,
-      linkedInUrl: 'linkedin.com/in/perfil',
-      comentariosAdicionales: 'x'.repeat(510),
-      aceptoPoliticaDatos: false,
-      fechaRegistroISO: '3026-01-01T00:00:00.000Z',
+      'Nombre completo': 'Nombre',
+      'Correo electrónico': 'correo-sin-formato',
+      Teléfono: '999',
+      'País de residencia': undefined,
+      'Años de experiencia': 70,
+      'Sector de interés': undefined,
+      'Nivel de inglés': undefined,
+      Disponibilidad: undefined,
+      'LinkedIn (URL del perfil)': 'linkedin.com/in/perfil',
+      'Comentarios adicionales': 'x'.repeat(510),
+      'Acepto política de datos': false,
     };
 
     renderJSON(validarRegistroTalento(registroInvalido));

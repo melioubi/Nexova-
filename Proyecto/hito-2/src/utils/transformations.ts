@@ -44,17 +44,17 @@ export function obtenerMinimo<T>(items: T[], obtenerValor: (item: T) => number):
 
 export function generarResumenTalento(registros: RegistroTalento[]): ResumenTalento {
   const totalRegistros = registros.length;
-  const totalConLinkedIn = registros.filter((registro) => Boolean(registro.linkedInUrl?.trim())).length;
+  const totalConLinkedIn = registros.filter((registro) => Boolean(registro['LinkedIn (URL del perfil)']?.trim())).length;
 
   return {
-    totalRegistros,
-    totalConLinkedIn,
-    promedioAniosExperiencia: calcularPromedio(registros, (registro) => registro.anosExperiencia),
-    minimoAniosExperiencia: obtenerMinimo(registros, (registro) => registro.anosExperiencia),
-    maximoAniosExperiencia: obtenerMaximo(registros, (registro) => registro.anosExperiencia),
-    porPais: contarPorCategoria(registros, 'paisResidencia'),
-    porSector: contarPorCategoria(registros, 'sectorInteres'),
-    porNivelIngles: contarPorCategoria(registros, 'nivelIngles'),
-    porDisponibilidad: contarPorCategoria(registros, 'disponibilidad'),
+    'Total de registros': totalRegistros,
+    'Total con LinkedIn': totalConLinkedIn,
+    'Promedio de años de experiencia': calcularPromedio(registros, (registro) => registro['Años de experiencia']),
+    'Mínimo de años de experiencia': obtenerMinimo(registros, (registro) => registro['Años de experiencia']),
+    'Máximo de años de experiencia': obtenerMaximo(registros, (registro) => registro['Años de experiencia']),
+    'Conteo por país': contarPorCategoria(registros, 'País de residencia'),
+    'Conteo por sector': contarPorCategoria(registros, 'Sector de interés'),
+    'Conteo por nivel de inglés': contarPorCategoria(registros, 'Nivel de inglés'),
+    'Conteo por disponibilidad': contarPorCategoria(registros, 'Disponibilidad'),
   };
 }

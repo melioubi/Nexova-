@@ -12,28 +12,26 @@ export type NivelIngles = 'Básico' | 'Intermedio' | 'Avanzado' | 'Nativo';
 export type Disponibilidad = 'Inmediata' | '1 mes' | '2-3 meses' | 'Solo explorando';
 
 export interface RegistroTalento {
-  id: string;
-  nombreCompleto: string;
-  correoElectronico: string;
-  telefono: string;
-  paisResidencia: PaisResidencia;
-  anosExperiencia: number;
-  sectorInteres: SectorInteres;
-  nivelIngles: NivelIngles;
-  disponibilidad: Disponibilidad;
-  linkedInUrl?: string;
-  comentariosAdicionales?: string;
-  aceptoPoliticaDatos: boolean;
-  fechaRegistroISO: string;
+  'Nombre completo': string;
+  'Correo electrónico': string;
+  Teléfono: string;
+  'País de residencia': PaisResidencia;
+  'Años de experiencia': number;
+  'Sector de interés': SectorInteres;
+  'Nivel de inglés': NivelIngles;
+  Disponibilidad: Disponibilidad;
+  'LinkedIn (URL del perfil)'?: string;
+  'Comentarios adicionales'?: string;
+  'Acepto política de datos': boolean;
 }
 
 export interface FiltrosRegistroTalento {
-  paisResidencia?: PaisResidencia;
-  sectorInteres?: SectorInteres;
-  nivelIngles?: NivelIngles;
-  disponibilidad?: Disponibilidad;
-  anosExperienciaMin?: number;
-  anosExperienciaMax?: number;
+  'País de residencia'?: PaisResidencia;
+  'Sector de interés'?: SectorInteres;
+  'Nivel de inglés'?: NivelIngles;
+  Disponibilidad?: Disponibilidad;
+  'Años de experiencia mínimo'?: number;
+  'Años de experiencia máximo'?: number;
 }
 
 export interface ErrorValidacion {
@@ -47,13 +45,13 @@ export interface ResultadoValidacion {
 }
 
 export interface ResumenTalento {
-  totalRegistros: number;
-  totalConLinkedIn: number;
-  promedioAniosExperiencia: number;
-  minimoAniosExperiencia: number | null;
-  maximoAniosExperiencia: number | null;
-  porPais: Record<string, number>;
-  porSector: Record<string, number>;
-  porNivelIngles: Record<string, number>;
-  porDisponibilidad: Record<string, number>;
+  'Total de registros': number;
+  'Total con LinkedIn': number;
+  'Promedio de años de experiencia': number;
+  'Mínimo de años de experiencia': number | null;
+  'Máximo de años de experiencia': number | null;
+  'Conteo por país': Record<string, number>;
+  'Conteo por sector': Record<string, number>;
+  'Conteo por nivel de inglés': Record<string, number>;
+  'Conteo por disponibilidad': Record<string, number>;
 }

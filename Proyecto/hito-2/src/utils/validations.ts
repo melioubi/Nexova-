@@ -1,18 +1,17 @@
 import type { ErrorValidacion, RegistroTalento, ResultadoValidacion } from '../types/models.js';
 
 const MENSAJES_ERROR = {
-  nombreCompleto: 'El nombre debe contener al menos nombre y apellido',
-  correoElectronico: 'Ingresa un email válido (ejemplo: nombre@empresa.com )',
-  telefono: 'El teléfono debe incluir código de país (ejemplo: +34 612 345 678)',
-  paisResidencia: 'Selecciona tu país de residencia',
-  anosExperiencia: 'Los años de experiencia deben estar entre 0 y 50',
-  sectorInteres: 'Selecciona el sector de tu interés',
-  nivelIngles: 'Indica tu nivel de inglés',
-  disponibilidad: 'Selecciona tu disponibilidad',
-  linkedInUrl: 'Si incluye LinkedIn, debe ser una URL válida',
-  comentariosAdicionales: 'Los comentarios no pueden exceder los 500 caracteres (quedan X)',
-  aceptoPoliticaDatos: 'Debes aceptar la política de tratamiento de datos para continuar',
-  fechaRegistroISO: 'La fecha de registro no puede estar en el futuro',
+  'Nombre completo': 'El nombre debe contener al menos nombre y apellido',
+  'Correo electrónico': 'Ingresa un email válido (ejemplo: nombre@empresa.com )',
+  Teléfono: 'El teléfono debe incluir código de país (ejemplo: +34 612 345 678)',
+  'País de residencia': 'Selecciona tu país de residencia',
+  'Años de experiencia': 'Los años de experiencia deben estar entre 0 y 50',
+  'Sector de interés': 'Selecciona el sector de tu interés',
+  'Nivel de inglés': 'Indica tu nivel de inglés',
+  Disponibilidad: 'Selecciona tu disponibilidad',
+  'LinkedIn (URL del perfil)': 'Si incluye LinkedIn, debe ser una URL válida',
+  'Comentarios adicionales': 'Los comentarios no pueden exceder los 500 caracteres (quedan X)',
+  'Acepto política de datos': 'Debes aceptar la política de tratamiento de datos para continuar',
 } as const;
 
 function agregarError(
@@ -26,49 +25,49 @@ function agregarError(
 function validarNombreCompleto(nombreCompleto: string | undefined, errores: ErrorValidacion[]): void {
   const palabras = (nombreCompleto ?? '').trim().split(/\s+/).filter(Boolean);
   if (palabras.length < 2) {
-    agregarError(errores, 'nombreCompleto', MENSAJES_ERROR.nombreCompleto);
+    agregarError(errores, 'Nombre completo', MENSAJES_ERROR['Nombre completo']);
   }
 }
 
 function validarCorreoElectronico(correoElectronico: string | undefined, errores: ErrorValidacion[]): void {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test((correoElectronico ?? '').trim())) {
-    agregarError(errores, 'correoElectronico', MENSAJES_ERROR.correoElectronico);
+    agregarError(errores, 'Correo electrónico', MENSAJES_ERROR['Correo electrónico']);
   }
 }
 
 function validarTelefono(telefono: string | undefined, errores: ErrorValidacion[]): void {
   const telefonoRegex = /^\+\d{1,3}(\s\d+)+$/;
   if (!telefonoRegex.test((telefono ?? '').trim())) {
-    agregarError(errores, 'telefono', MENSAJES_ERROR.telefono);
+    agregarError(errores, 'Teléfono', MENSAJES_ERROR.Teléfono);
   }
 }
 
 function validarCamposObligatorios(registro: Partial<RegistroTalento>, errores: ErrorValidacion[]): void {
-  if (!registro.paisResidencia) {
-    agregarError(errores, 'paisResidencia', MENSAJES_ERROR.paisResidencia);
+  if (!registro['País de residencia']) {
+    agregarError(errores, 'País de residencia', MENSAJES_ERROR['País de residencia']);
   }
 
-  if (!registro.sectorInteres) {
-    agregarError(errores, 'sectorInteres', MENSAJES_ERROR.sectorInteres);
+  if (!registro['Sector de interés']) {
+    agregarError(errores, 'Sector de interés', MENSAJES_ERROR['Sector de interés']);
   }
 
-  if (!registro.nivelIngles) {
-    agregarError(errores, 'nivelIngles', MENSAJES_ERROR.nivelIngles);
+  if (!registro['Nivel de inglés']) {
+    agregarError(errores, 'Nivel de inglés', MENSAJES_ERROR['Nivel de inglés']);
   }
 
-  if (!registro.disponibilidad) {
-    agregarError(errores, 'disponibilidad', MENSAJES_ERROR.disponibilidad);
+  if (!registro.Disponibilidad) {
+    agregarError(errores, 'Disponibilidad', MENSAJES_ERROR.Disponibilidad);
   }
 
-  if (!registro.aceptoPoliticaDatos) {
-    agregarError(errores, 'aceptoPoliticaDatos', MENSAJES_ERROR.aceptoPoliticaDatos);
+  if (!registro['Acepto política de datos']) {
+    agregarError(errores, 'Acepto política de datos', MENSAJES_ERROR['Acepto política de datos']);
   }
 }
 
 function validarRangoExperiencia(anosExperiencia: number | undefined, errores: ErrorValidacion[]): void {
   if (typeof anosExperiencia !== 'number' || Number.isNaN(anosExperiencia) || anosExperiencia < 0 || anosExperiencia > 50) {
-    agregarError(errores, 'anosExperiencia', MENSAJES_ERROR.anosExperiencia);
+    agregarError(errores, 'Años de experiencia', MENSAJES_ERROR['Años de experiencia']);
   }
 }
 
@@ -79,7 +78,7 @@ function validarLinkedIn(linkedInUrl: string | undefined, errores: ErrorValidaci
 
   const linkedInRegex = /^https?:\/\/.+/i;
   if (!linkedInRegex.test(linkedInUrl.trim())) {
-    agregarError(errores, 'linkedInUrl', MENSAJES_ERROR.linkedInUrl);
+    agregarError(errores, 'LinkedIn (URL del perfil)', MENSAJES_ERROR['LinkedIn (URL del perfil)']);
   }
 }
 
@@ -89,39 +88,22 @@ function validarComentarios(comentariosAdicionales: string | undefined, errores:
     const restantes = 500 - comentarios.length;
     agregarError(
       errores,
-      'comentariosAdicionales',
-      MENSAJES_ERROR.comentariosAdicionales.replace('X', String(restantes)),
+      'Comentarios adicionales',
+      MENSAJES_ERROR['Comentarios adicionales'].replace('X', String(restantes)),
     );
-  }
-}
-
-function validarFechaRegistro(fechaRegistroISO: string | undefined, errores: ErrorValidacion[]): void {
-  if (!fechaRegistroISO) {
-    return;
-  }
-
-  const fecha = new Date(fechaRegistroISO);
-  if (Number.isNaN(fecha.getTime())) {
-    agregarError(errores, 'fechaRegistroISO', 'La fecha de registro debe ser una fecha válida en formato ISO');
-    return;
-  }
-
-  if (fecha.getTime() > Date.now()) {
-    agregarError(errores, 'fechaRegistroISO', MENSAJES_ERROR.fechaRegistroISO);
   }
 }
 
 export function validarRegistroTalento(registro: Partial<RegistroTalento>): ResultadoValidacion {
   const errores: ErrorValidacion[] = [];
 
-  validarNombreCompleto(registro.nombreCompleto, errores);
-  validarCorreoElectronico(registro.correoElectronico, errores);
-  validarTelefono(registro.telefono, errores);
+  validarNombreCompleto(registro['Nombre completo'], errores);
+  validarCorreoElectronico(registro['Correo electrónico'], errores);
+  validarTelefono(registro.Teléfono, errores);
   validarCamposObligatorios(registro, errores);
-  validarRangoExperiencia(registro.anosExperiencia, errores);
-  validarLinkedIn(registro.linkedInUrl, errores);
-  validarComentarios(registro.comentariosAdicionales, errores);
-  validarFechaRegistro(registro.fechaRegistroISO, errores);
+  validarRangoExperiencia(registro['Años de experiencia'], errores);
+  validarLinkedIn(registro['LinkedIn (URL del perfil)'], errores);
+  validarComentarios(registro['Comentarios adicionales'], errores);
 
   return {
     esValido: errores.length === 0,
