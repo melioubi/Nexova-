@@ -1,57 +1,63 @@
-export type PaisResidencia = 'España' | 'Estados Unidos' | 'Otro';
+export type EnglishLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2' | 'Native';
 
-export type SectorInteres =
-  | 'Tecnología'
-  | 'Retail'
-  | 'Servicios Financieros'
-  | 'Consultoría'
-  | 'Otro';
+export type SeniorityLevel = 'Junior' | 'Semi-Senior' | 'Senior' | 'Lead' | 'Executive';
 
-export type NivelIngles = 'Básico' | 'Intermedio' | 'Avanzado' | 'Nativo';
+export type AvailabilityStatus = 'Immediate' | '2 weeks' | '1 month' | 'Not available';
 
-export type Disponibilidad = 'Inmediata' | '1 mes' | '2-3 meses' | 'Solo explorando';
+export type CandidateStatus = 'Active' | 'In process' | 'Hired' | 'Inactive';
 
-export interface RegistroTalento {
-  'Nombre completo': string;
-  'Correo electrónico': string;
-  Teléfono: string;
-  'País de residencia': PaisResidencia;
-  'Años de experiencia': number;
-  'Sector de interés': SectorInteres;
-  'Nivel de inglés': NivelIngles;
-  Disponibilidad: Disponibilidad;
-  'LinkedIn (URL del perfil)'?: string;
-  'Comentarios adicionales'?: string;
-  'Acepto política de datos': boolean;
+export type VacancyStatus = 'Open' | 'In progress' | 'Closed' | 'On hold';
+
+export type ProcessStage =
+  | 'Screening'
+  | 'Interview'
+  | 'Technical test'
+  | 'Final interview'
+  | 'Offer'
+  | 'Rejected'
+  | 'Hired';
+
+export interface Candidate {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  yearsOfExperience: number;
+  skills: string[];
+  englishLevel: EnglishLevel;
+  seniority: SeniorityLevel;
+  currentSalary: number;
+  expectedSalary: number;
+  availability: AvailabilityStatus;
+  location: string;
+  remoteOnly: boolean;
+  status: CandidateStatus;
 }
 
-export interface FiltrosRegistroTalento {
-  'País de residencia'?: PaisResidencia;
-  'Sector de interés'?: SectorInteres;
-  'Nivel de inglés'?: NivelIngles;
-  Disponibilidad?: Disponibilidad;
-  'Años de experiencia mínimo'?: number;
-  'Años de experiencia máximo'?: number;
+export interface Vacancy {
+  id: string;
+  title: string;
+  companyName: string;
+  requiredSkills: string[];
+  preferredSkills: string[];
+  minYearsExperience: number;
+  maxYearsExperience: number;
+  requiredEnglishLevel: EnglishLevel;
+  requiredSeniority: SeniorityLevel;
+  salaryRangeMin: number;
+  salaryRangeMax: number;
+  isRemote: boolean;
+  location: string;
+  status: VacancyStatus;
 }
 
-export interface ErrorValidacion {
-  campo: keyof RegistroTalento | 'general';
-  mensaje: string;
-}
-
-export interface ResultadoValidacion {
-  esValido: boolean;
-  errores: ErrorValidacion[];
-}
-
-export interface ResumenTalento {
-  'Total de registros': number;
-  'Total con LinkedIn': number;
-  'Promedio de años de experiencia': number;
-  'Mínimo de años de experiencia': number | null;
-  'Máximo de años de experiencia': number | null;
-  'Conteo por país': Record<string, number>;
-  'Conteo por sector': Record<string, number>;
-  'Conteo por nivel de inglés': Record<string, number>;
-  'Conteo por disponibilidad': Record<string, number>;
+export interface SelectionProcess {
+  id: string;
+  candidateId: string;
+  vacancyId: string;
+  stage: ProcessStage;
+  score: number;
+  notes: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

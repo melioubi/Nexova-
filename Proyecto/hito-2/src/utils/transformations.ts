@@ -1,60 +1,177 @@
-import type { RegistroTalento, ResumenTalento } from '../types/models.js';
+import type {
+  Candidate,
+  CandidateStatus,
+  EnglishLevel,
+  SelectionProcess,
+  SeniorityLevel,
+  Vacancy,
+} from '../types/models.js';
 
-export function contarPorCategoria<T, K extends keyof T>(items: T[], campo: K): Record<string, number> {
-  return items.reduce<Record<string, number>>((acumulador, item) => {
-    const llave = String(item[campo]);
-    acumulador[llave] = (acumulador[llave] ?? 0) + 1;
-    return acumulador;
-  }, {});
+const SENIORITY_ORDER: SeniorityLevel[] = ['Junior', 'Semi-Senior', 'Senior', 'Lead', 'Executive'];
+const ENGLISH_ORDER: EnglishLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Native'];
+
+function roundTo2(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
-export function sumarValores<T>(items: T[], obtenerValor: (item: T) => number): number {
-  return items.reduce((acumulador, item) => acumulador + obtenerValor(item), 0);
+function getSkillMatchScore(candidate: Candidate, vacancy: Vacancy): number {
+  const candidateSkills = new Set(candidate.skills.map((skill) => skill.toLowerCase()));
+  const requiredSkills = vacancy.requiredSkills.map((skill) => skill.toLowerCase());
+  const preferredSkills = vacancy.preferredSkills.map((skill) => skill.toLowerCase());
+
+  const requiredMatches = requiredSkills.filter((skill) => candidateSkills.has(skill)).length;
+  let score = 0;
+
+  if (requiredSkills.length > 0 && requiredMatches === requiredSkills.length) {
+    score += 40;
+  } else if (requiredSkills.length > 0 && requiredMatches / requiredSkills.length >= 0.5) {
+    score += 20;
+  }
+
+  const preferredMatches = preferredSkills.filter((skill) => candidateSkills.has(skill)).length;
+  score += Math.min(preferredMatches * 10, 20);
+
+  return score;
 }
 
-export function calcularPromedio<T>(items: T[], obtenerValor: (item: T) => number): number {
-  if (items.length === 0) {
+function getExperienceMatchScore(candidate: Candidate, vacancy: Vacancy): number {
+  const years = candidate.yearsOfExperience;
+
+  if (years >= vacancy.minYearsExperience && years <= vacancy.maxYearsExperience) {
+    return 20;
+  }
+
+  const distanceToRange =
+    years < vacancy.minYearsExperience ? vacancy.minYearsExperience - years : years - vacancy.maxYearsExperience;
+
+  if (distanceToRange >= 1 && distanceToRange <= 2) {
+    return 10;
+  }
+
+  return 0;
+}
+
+function getSeniorityMatchScore(candidate: Candidate, vacancy: Vacancy): number {
+  if (candidate.seniority === vacancy.requiredSeniority) {
+    return 15;
+  }
+
+  const candidateIndex = SENIORITY_ORDER.indexOf(candidate.seniority);
+  const vacancyIndex = SENIORITY_ORDER.indexOf(vacancy.requiredSeniority);
+
+  if (Math.abs(candidateIndex - vacancyIndex) === 1) {
+    return 7;
+  }
+
+  return 0;
+}
+
+function getEnglishMatchScore(candidate: Candidate, vacancy: Vacancy): number {
+  const candidateIndex = ENGLISH_ORDER.indexOf(candidate.englishLevel);
+  const requiredIndex = ENGLISH_ORDER.indexOf(vacancy.requiredEnglishLevel);
+  return candidateIndex >= requiredIndex ? 15 : 0;
+}
+
+function getSalaryMatchScore(candidate: Candidate, vacancy: Vacancy): number {
+  const salary = candidate.expectedSalary;
+
+  if (salary >= vacancy.salaryRangeMin && salary <= vacancy.salaryRangeMax) {
+    return 10;
+  }
+
+  if (salary > vacancy.salaryRangeMax && salary <= vacancy.salaryRangeMax * 1.2) {
+    return 5;
+  }
+
+  return 0;
+}
+
+export function calculateCandidateScore(candidate: Candidate, vacancy: Vacancy): number {
+  const score =
+    getSkillMatchScore(candidate, vacancy) +
+    getExperienceMatchScore(candidate, vacancy) +
+    getSeniorityMatchScore(candidate, vacancy) +
+    getEnglishMatchScore(candidate, vacancy) +
+    getSalaryMatchScore(candidate, vacancy);
+
+  return Math.max(0, Math.min(100, score));
+}
+
+export function rankCandidatesForVacancy(
+  candidates: Candidate[],
+  vacancy: Vacancy,
+): Array<{ candidate: Candidate; score: number }> {
+  return candidates
+    .map((candidate) => ({ candidate, score: calculateCandidateScore(candidate, vacancy) }))
+    .sort((a, b) => b.score - a.score);
+}
+
+export function groupCandidatesBySeniority(candidates: Candidate[]): Record<SeniorityLevel, Candidate[]> {
+  const grouped: Record<SeniorityLevel, Candidate[]> = {
+    Junior: [],
+    'Semi-Senior': [],
+    Senior: [],
+    Lead: [],
+    Executive: [],
+  };
+
+  for (const candidate of candidates) {
+    grouped[candidate.seniority].push(candidate);
+  }
+
+  return grouped;
+}
+
+export function countCandidatesByStatus(candidates: Candidate[]): Record<CandidateStatus, number> {
+  const counts: Record<CandidateStatus, number> = {
+    Active: 0,
+    'In process': 0,
+    Hired: 0,
+    Inactive: 0,
+  };
+
+  for (const candidate of candidates) {
+    counts[candidate.status] += 1;
+  }
+
+  return counts;
+}
+
+export function calculateAverageSalary(candidates: Candidate[]): number {
+  if (candidates.length === 0) {
     return 0;
   }
 
-  return sumarValores(items, obtenerValor) / items.length;
+  const total = candidates.reduce((sum, candidate) => sum + candidate.expectedSalary, 0);
+  return roundTo2(total / candidates.length);
 }
 
-export function obtenerMaximo<T>(items: T[], obtenerValor: (item: T) => number): number | null {
-  if (items.length === 0) {
-    return null;
+export function findTopSkills(candidates: Candidate[], topN: number): Array<{ skill: string; count: number }> {
+  const counts = new Map<string, { skill: string; count: number }>();
+
+  for (const candidate of candidates) {
+    const uniqueSkills = new Set(candidate.skills.map((skill) => skill.trim()).filter((skill) => skill.length > 0));
+    for (const skill of uniqueSkills) {
+      const key = skill.toLowerCase();
+      const entry = counts.get(key);
+      if (entry) {
+        entry.count += 1;
+      } else {
+        counts.set(key, { skill, count: 1 });
+      }
+    }
   }
 
-  return items.reduce((maximo, item) => {
-    const valor = obtenerValor(item);
-    return valor > maximo ? valor : maximo;
-  }, obtenerValor(items[0]));
+  return [...counts.values()]
+    .sort((a, b) => b.count - a.count || a.skill.localeCompare(b.skill))
+    .slice(0, Math.max(0, topN));
 }
 
-export function obtenerMinimo<T>(items: T[], obtenerValor: (item: T) => number): number | null {
-  if (items.length === 0) {
-    return null;
+export function calculateVacancyFillRate(processes: SelectionProcess[]): number {
+  if (processes.length === 0) {
+    return 0;
   }
 
-  return items.reduce((minimo, item) => {
-    const valor = obtenerValor(item);
-    return valor < minimo ? valor : minimo;
-  }, obtenerValor(items[0]));
-}
-
-export function generarResumenTalento(registros: RegistroTalento[]): ResumenTalento {
-  const totalRegistros = registros.length;
-  const totalConLinkedIn = registros.filter((registro) => Boolean(registro['LinkedIn (URL del perfil)']?.trim())).length;
-
-  return {
-    'Total de registros': totalRegistros,
-    'Total con LinkedIn': totalConLinkedIn,
-    'Promedio de años de experiencia': calcularPromedio(registros, (registro) => registro['Años de experiencia']),
-    'Mínimo de años de experiencia': obtenerMinimo(registros, (registro) => registro['Años de experiencia']),
-    'Máximo de años de experiencia': obtenerMaximo(registros, (registro) => registro['Años de experiencia']),
-    'Conteo por país': contarPorCategoria(registros, 'País de residencia'),
-    'Conteo por sector': contarPorCategoria(registros, 'Sector de interés'),
-    'Conteo por nivel de inglés': contarPorCategoria(registros, 'Nivel de inglés'),
-    'Conteo por disponibilidad': contarPorCategoria(registros, 'Disponibilidad'),
-  };
+  const hiredCount = processes.filter((process) => process.stage === 'Hired').length;
+  return roundTo2((hiredCount / processes.length) * 100);
 }

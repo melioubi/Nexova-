@@ -1,12 +1,19 @@
-import { filtrarPorCriterios, ordenarPorCampo, ordenarPorMultiplesCampos } from './utils/collections.js';
-import { busquedaBinaria, busquedaLineal } from './utils/search.js';
-import { generarResumenTalento } from './utils/transformations.js';
-import { validarRegistroTalento } from './utils/validations.js';
-import { registrosTalentoDemo } from './sampleData.js';
-import type { PaisResidencia, SectorInteres } from './types/models.js';
-
-const sectoresValidos: SectorInteres[] = ['Tecnología', 'Retail', 'Servicios Financieros', 'Consultoría', 'Otro'];
-const paisesValidos: PaisResidencia[] = ['España', 'Estados Unidos', 'Otro'];
+import {
+  filterCandidatesByAvailability,
+  filterCandidatesBySeniority,
+  filterCandidatesBySkills,
+  sortCandidatesByExperience,
+  sortCandidatesBySalary,
+} from './utils/collections.js';
+import { binarySearchCandidateBySalary, findCandidateByEmail, findCandidateById } from './utils/search.js';
+import {
+  calculateAverageSalary,
+  calculateVacancyFillRate,
+  countCandidatesByStatus,
+  rankCandidatesForVacancy,
+} from './utils/transformations.js';
+import { validateCandidate, validateVacancy } from './utils/validations.js';
+import { sampleCandidates, sampleSelectionProcesses, sampleVacancy } from './sampleData.js';
 
 function renderJSON(data: unknown): void {
   const output = document.getElementById('output');
@@ -26,87 +33,49 @@ function inicializarEventos(): void {
   const btnValidar = document.getElementById('btn-validar');
 
   btnFiltrar?.addEventListener('click', () => {
-    const sectorValor = (document.getElementById('filtro-sector') as HTMLSelectElement | null)?.value;
-    const paisValor = (document.getElementById('filtro-pais') as HTMLSelectElement | null)?.value;
-
-    const sector = sectoresValidos.find((item) => item === sectorValor);
-    const pais = paisesValidos.find((item) => item === paisValor);
-
-    const filtrados = filtrarPorCriterios(registrosTalentoDemo, {
-      ...(sector ? { 'Sector de interés': sector } : {}),
-      ...(pais ? { 'País de residencia': pais } : {}),
-    });
-
-    renderJSON(filtrados);
+    renderJSON(filterCandidatesBySkills(sampleCandidates, ['TypeScript', 'React']));
   });
 
   btnOrdenar?.addEventListener('click', () => {
-    const orden = (document.getElementById('orden-experiencia') as HTMLSelectElement | null)?.value === 'desc' ? 'desc' : 'asc';
-    renderJSON(ordenarPorCampo(registrosTalentoDemo, 'Años de experiencia', orden));
+    renderJSON(sortCandidatesByExperience(sampleCandidates, 'desc'));
   });
 
   btnOrdenarMultiple?.addEventListener('click', () => {
-    const resultado = ordenarPorMultiplesCampos(registrosTalentoDemo, [
-      { campo: 'Sector de interés', orden: 'asc' },
-      { campo: 'Años de experiencia', orden: 'desc' },
-    ]);
-    renderJSON(resultado);
+    renderJSON({
+      bySalary: sortCandidatesBySalary(sampleCandidates, 'asc'),
+      byAvailability: filterCandidatesByAvailability(sampleCandidates, ['Immediate', '2 weeks']),
+      bySeniority: filterCandidatesBySeniority(sampleCandidates, 'Senior'),
+    });
   });
 
   btnBusquedaLineal?.addEventListener('click', () => {
-    const correo = (document.getElementById('input-correo') as HTMLInputElement | null)?.value?.trim() ?? '';
-    const indice = busquedaLineal(registrosTalentoDemo, (item) => item['Correo electrónico'] === correo);
-
-    renderJSON({
-      correo,
-      indice,
-      registro: indice >= 0 ? registrosTalentoDemo[indice] : null,
-    });
+    const email = (document.getElementById('input-correo') as HTMLInputElement | null)?.value?.trim() ?? '';
+    renderJSON({ byId: findCandidateById(sampleCandidates, 'C-2024-0452'), byEmail: findCandidateByEmail(sampleCandidates, email) });
   });
 
   btnBusquedaBinaria?.addEventListener('click', () => {
-    const valorInput = (document.getElementById('input-anos') as HTMLInputElement | null)?.value ?? '';
-    const anos = Number(valorInput);
-    const ordenados = ordenarPorCampo(registrosTalentoDemo, 'Años de experiencia', 'asc');
-
-    const indice = busquedaBinaria(
-      ordenados,
-      { ...ordenados[0], 'Años de experiencia': anos },
-      (a, b) => a['Años de experiencia'] - b['Años de experiencia'],
-    );
-
-    renderJSON({
-      anosBuscados: anos,
-      indice,
-      registro: indice >= 0 ? ordenados[indice] : null,
-      arregloOrdenado: ordenados,
-    });
+    const value = (document.getElementById('input-anos') as HTMLInputElement | null)?.value ?? '';
+    const targetSalary = Number(value);
+    const sorted = sortCandidatesBySalary(sampleCandidates, 'asc');
+    const index = binarySearchCandidateBySalary(sorted, targetSalary);
+    renderJSON({ targetSalary, index, result: index >= 0 ? sorted[index] : null });
   });
 
   btnReporte?.addEventListener('click', () => {
-    renderJSON(generarResumenTalento(registrosTalentoDemo));
+    renderJSON({
+      ranking: rankCandidatesForVacancy(sampleCandidates, sampleVacancy),
+      statusCount: countCandidatesByStatus(sampleCandidates),
+      averageSalary: calculateAverageSalary(sampleCandidates),
+      fillRate: calculateVacancyFillRate(sampleSelectionProcesses),
+    });
   });
 
   btnValidar?.addEventListener('click', () => {
-    const registroInvalido = {
-      'Nombre completo': 'Nombre',
-      'Correo electrónico': 'correo-sin-formato',
-      Teléfono: '999',
-      'País de residencia': undefined,
-      'Años de experiencia': 70,
-      'Sector de interés': undefined,
-      'Nivel de inglés': undefined,
-      Disponibilidad: undefined,
-      'LinkedIn (URL del perfil)': 'linkedin.com/in/perfil',
-      'Comentarios adicionales': 'x'.repeat(510),
-      'Acepto política de datos': false,
-    };
-
-    renderJSON(validarRegistroTalento(registroInvalido));
+    renderJSON({ candidate: validateCandidate(sampleCandidates[0]), vacancy: validateVacancy(sampleVacancy) });
   });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  renderJSON(registrosTalentoDemo);
+  renderJSON(sampleCandidates);
   inicializarEventos();
 });

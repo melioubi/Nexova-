@@ -1,32 +1,41 @@
-export function busquedaLineal<T>(items: T[], predicado: (item: T) => boolean): number {
-  for (let indice = 0; indice < items.length; indice += 1) {
-    if (predicado(items[indice])) {
-      return indice;
+import type { Candidate } from '../types/models.js';
+
+export function findCandidateById(candidates: Candidate[], id: string): Candidate | null {
+  for (const candidate of candidates) {
+    if (candidate.id === id) {
+      return candidate;
     }
   }
-  return -1;
+  return null;
 }
 
-export function busquedaBinaria<T>(
-  itemsOrdenados: T[],
-  valorBuscado: T,
-  comparador: (a: T, b: T) => number,
-): number {
-  let izquierda = 0;
-  let derecha = itemsOrdenados.length - 1;
+export function findCandidateByEmail(candidates: Candidate[], email: string): Candidate | null {
+  const targetEmail = email.toLowerCase();
 
-  while (izquierda <= derecha) {
-    const medio = Math.floor((izquierda + derecha) / 2);
-    const comparacion = comparador(itemsOrdenados[medio], valorBuscado);
+  for (const candidate of candidates) {
+    if (candidate.email.toLowerCase() === targetEmail) {
+      return candidate;
+    }
+  }
+  return null;
+}
 
-    if (comparacion === 0) {
-      return medio;
+export function binarySearchCandidateBySalary(sortedCandidates: Candidate[], targetSalary: number): number {
+  let left = 0;
+  let right = sortedCandidates.length - 1;
+
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    const salary = sortedCandidates[mid].expectedSalary;
+
+    if (salary === targetSalary) {
+      return mid;
     }
 
-    if (comparacion < 0) {
-      izquierda = medio + 1;
+    if (salary < targetSalary) {
+      left = mid + 1;
     } else {
-      derecha = medio - 1;
+      right = mid - 1;
     }
   }
 
