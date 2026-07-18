@@ -1,0 +1,4 @@
+node_modules/
+**/node_modules/
+Proyecto/hito-2/dist/
+npm-debug.log*
