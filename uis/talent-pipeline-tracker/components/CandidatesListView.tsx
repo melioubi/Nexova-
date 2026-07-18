@@ -11,11 +11,34 @@ import {
   DEFAULT_STATUSES,
 } from "@/types/tracker";
 
-function titleCase(value: string) {
+const STATUS_LABELS: Record<string, string> = {
+  received: "Recibida",
+  in_progress: "En proceso",
+  hired: "Contratada",
+  rejected: "Rechazada",
+};
+
+const STAGE_LABELS: Record<string, string> = {
+  pending: "Pendiente",
+  review: "Revision",
+  interview: "Entrevista",
+  offer: "Oferta",
+  closed: "Cerrada",
+};
+
+function toHumanLabel(value: string) {
   return value
     .split("_")
     .map((part) => part[0]?.toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function statusLabel(value: string) {
+  return STATUS_LABELS[value] ?? toHumanLabel(value);
+}
+
+function stageLabel(value: string) {
+  return STAGE_LABELS[value] ?? toHumanLabel(value);
 }
 
 export function CandidatesListView() {
@@ -115,7 +138,7 @@ export function CandidatesListView() {
                 <option value="">Todos</option>
                 {availableStatuses.map((status) => (
                   <option key={status} value={status}>
-                    {titleCase(status)}
+                    {statusLabel(status)}
                   </option>
                 ))}
               </select>
@@ -131,7 +154,7 @@ export function CandidatesListView() {
                 <option value="">Todas</option>
                 {availableStages.map((stage) => (
                   <option key={stage} value={stage}>
-                    {titleCase(stage)}
+                    {stageLabel(stage)}
                   </option>
                 ))}
               </select>
@@ -198,8 +221,8 @@ export function CandidatesListView() {
                       <tr key={record.id} className="border-b border-border/80">
                         <td className="p-2 font-medium">{record.full_name}</td>
                         <td className="p-2">{record.position}</td>
-                        <td className="p-2">{titleCase(record.status)}</td>
-                        <td className="p-2">{titleCase(record.stage)}</td>
+                        <td className="p-2">{statusLabel(record.status)}</td>
+                        <td className="p-2">{stageLabel(record.stage)}</td>
                         <td className="p-2">
                           <Link
                             href={`/candidates/${record.id}`}

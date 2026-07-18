@@ -23,11 +23,34 @@ interface CandidateDetailViewProps {
   id: string;
 }
 
-function titleCase(value: string) {
+const STATUS_LABELS: Record<string, string> = {
+  received: "Recibida",
+  in_progress: "En proceso",
+  hired: "Contratada",
+  rejected: "Rechazada",
+};
+
+const STAGE_LABELS: Record<string, string> = {
+  pending: "Pendiente",
+  review: "Revision",
+  interview: "Entrevista",
+  offer: "Oferta",
+  closed: "Cerrada",
+};
+
+function toHumanLabel(value: string) {
   return value
     .split("_")
     .map((part) => part[0]?.toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function statusLabel(value: string) {
+  return STATUS_LABELS[value] ?? toHumanLabel(value);
+}
+
+function stageLabel(value: string) {
+  return STAGE_LABELS[value] ?? toHumanLabel(value);
 }
 
 export function CandidateDetailView({ id }: CandidateDetailViewProps) {
@@ -260,7 +283,7 @@ export function CandidateDetailView({ id }: CandidateDetailViewProps) {
               >
                 {statusOptions.map((status) => (
                   <option key={status} value={status}>
-                    {titleCase(status)}
+                    {statusLabel(status)}
                   </option>
                 ))}
               </select>
@@ -276,7 +299,7 @@ export function CandidateDetailView({ id }: CandidateDetailViewProps) {
               >
                 {stageOptions.map((stage) => (
                   <option key={stage} value={stage}>
-                    {titleCase(stage)}
+                    {stageLabel(stage)}
                   </option>
                 ))}
               </select>
