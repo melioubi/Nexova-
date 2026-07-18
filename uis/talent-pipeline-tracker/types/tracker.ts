@@ -80,3 +80,17 @@ export const DEFAULT_STAGES = [
   "offer",
   "closed",
 ];
+
+export const NEXOVA_POSITION_OPTIONS = [
+  "Consultor/a de Seleccion",
+  "Especialista en Talent Acquisition",
+  "Headhunter Ejecutivo/a",
+  "Recruiter IT",
+  "Agente de Atencion al Cliente",
+  "Supervisor/a de Soporte al Cliente",
+  "Formador/a Corporativo/a",
+  "Coordinador/a de Formacion",
+  "Ejecutivo/a de Cuentas",
+  "SDR (Sales Development Representative)",
+  "Generalista de RR. HH.",
+];

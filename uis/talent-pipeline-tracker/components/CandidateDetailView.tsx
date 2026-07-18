@@ -28,6 +28,8 @@ const STATUS_LABELS: Record<string, string> = {
   in_progress: "En proceso",
   hired: "Contratada",
   rejected: "Rechazada",
+  selected: "Seleccionada",
+  discarded: "Descartada",
 };
 
 const STAGE_LABELS: Record<string, string> = {
@@ -36,7 +38,14 @@ const STAGE_LABELS: Record<string, string> = {
   interview: "Entrevista",
   offer: "Oferta",
   closed: "Cerrada",
+  personal_interview: "Entrevista personal",
+  technical_interview: "Entrevista tecnica",
+  offer_presented: "Oferta presentada",
 };
+
+function normalizeKey(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "_");
+}
 
 function toHumanLabel(value: string) {
   return value
@@ -46,11 +55,11 @@ function toHumanLabel(value: string) {
 }
 
 function statusLabel(value: string) {
-  return STATUS_LABELS[value] ?? toHumanLabel(value);
+  return STATUS_LABELS[normalizeKey(value)] ?? toHumanLabel(value);
 }
 
 function stageLabel(value: string) {
-  return STAGE_LABELS[value] ?? toHumanLabel(value);
+  return STAGE_LABELS[normalizeKey(value)] ?? toHumanLabel(value);
 }
 
 export function CandidateDetailView({ id }: CandidateDetailViewProps) {

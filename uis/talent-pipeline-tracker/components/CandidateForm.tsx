@@ -1,7 +1,11 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { CandidateCreatePayload, CandidateFormValues } from "@/types/tracker";
+import {
+  CandidateCreatePayload,
+  CandidateFormValues,
+  NEXOVA_POSITION_OPTIONS,
+} from "@/types/tracker";
 
 interface CandidateFormProps {
   title: string;
@@ -41,6 +45,16 @@ export function CandidateForm({
       values.position.trim().length > 1,
     [values],
   );
+
+  const positionOptions = useMemo(() => {
+    const options = [...NEXOVA_POSITION_OPTIONS];
+
+    if (values.position && !options.includes(values.position)) {
+      options.unshift(values.position);
+    }
+
+    return options;
+  }, [values.position]);
 
   function validateForm() {
     if (!hasRequiredFields) {
@@ -135,14 +149,21 @@ export function CandidateForm({
 
         <label className="grid gap-1 text-sm">
           Puesto *
-          <input
+          <select
             className="rounded-md border border-border bg-white px-3 py-2"
             value={values.position}
             onChange={(event) =>
               setValues((prev) => ({ ...prev, position: event.target.value }))
             }
             required
-          />
+          >
+            <option value="">Selecciona un puesto</option>
+            {positionOptions.map((position) => (
+              <option key={position} value={position}>
+                {position}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label className="grid gap-1 text-sm">
