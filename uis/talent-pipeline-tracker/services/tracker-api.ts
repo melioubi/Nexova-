@@ -6,6 +6,8 @@ import {
   CandidateNotesResponse,
   CandidatePatchPayload,
   CandidateRecord,
+  normalizeStage,
+  normalizeStatus,
 } from "@/types/tracker";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
@@ -18,6 +20,14 @@ class ApiError extends Error {
     super(message);
     this.name = "ApiError";
   }
+}
+
+function normalizeRecord(record: CandidateRecord): CandidateRecord {
+  return {
+    ...record,
+    status: normalizeStatus(record.status),
+    stage: normalizeStage(record.stage),
+  };
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -54,40 +64,48 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export async function getRecords(): Promise<CandidateListResponse> {
-  return request<CandidateListResponse>("/records?limit=200");
+  const response = await request<CandidateListResponse>("/records?limit=200");
+  return {
+    ...response,
+    data: response.data.map(normalizeRecord),
+  };
 }
 
 export async function getRecordById(id: string): Promise<CandidateRecord> {
-  return request<CandidateRecord>(`/records/${id}`);
+  const record = await request<CandidateRecord>(`/records/${id}`);
+  return normalizeRecord(record);
 }
 
 export async function createRecord(
   payload: CandidateCreatePayload,
 ): Promise<CandidateRecord> {
-  return request<CandidateRecord>("/records", {
+  const record = await request<CandidateRecord>("/records", {
     method: "POST",
     body: JSON.stringify(payload),
   });
+  return normalizeRecord(record);
 }
 
 export async function updateRecord(
   id: string,
   payload: CandidateCreatePayload,
 ): Promise<CandidateRecord> {
-  return request<CandidateRecord>(`/records/${id}`, {
+  const record = await request<CandidateRecord>(`/records/${id}`, {
     method: "PUT",
     body: JSON.stringify(payload),
   });
+  return normalizeRecord(record);
 }
 
 export async function patchRecord(
   id: string,
   payload: CandidatePatchPayload,
 ): Promise<CandidateRecord> {
-  return request<CandidateRecord>(`/records/${id}`, {
+  const record = await request<CandidateRecord>(`/records/${id}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
+  return normalizeRecord(record);
 }
 
 export async function getRecordNotes(id: string): Promise<CandidateNotesResponse> {

@@ -9,46 +9,11 @@ import {
   CandidateRecord,
   DEFAULT_STAGES,
   DEFAULT_STATUSES,
+  normalizeStage,
+  normalizeStatus,
+  stageLabel,
+  statusLabel,
 } from "@/types/tracker";
-
-const STATUS_LABELS: Record<string, string> = {
-  received: "Recibida",
-  in_progress: "En proceso",
-  hired: "Contratada",
-  rejected: "Rechazada",
-  selected: "Seleccionada",
-  discarded: "Descartada",
-};
-
-const STAGE_LABELS: Record<string, string> = {
-  pending: "Pendiente",
-  review: "Revision",
-  interview: "Entrevista",
-  offer: "Oferta",
-  closed: "Cerrada",
-  personal_interview: "Entrevista personal",
-  technical_interview: "Entrevista tecnica",
-  offer_presented: "Oferta presentada",
-};
-
-function normalizeKey(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, "_");
-}
-
-function toHumanLabel(value: string) {
-  return value
-    .split("_")
-    .map((part) => part[0]?.toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function statusLabel(value: string) {
-  return STATUS_LABELS[normalizeKey(value)] ?? toHumanLabel(value);
-}
-
-function stageLabel(value: string) {
-  return STAGE_LABELS[normalizeKey(value)] ?? toHumanLabel(value);
-}
 
 export function CandidatesListView() {
   const [records, setRecords] = useState<CandidateRecord[]>([]);
@@ -60,9 +25,17 @@ export function CandidatesListView() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const statusParam = searchParams.get("status") ?? "";
-  const stageParam = searchParams.get("stage") ?? "";
+  const statusParamRaw = searchParams.get("status") ?? "";
+  const stageParamRaw = searchParams.get("stage") ?? "";
   const queryParam = searchParams.get("q") ?? "";
+
+  const statusParam = (DEFAULT_STATUSES as readonly string[]).includes(statusParamRaw)
+    ? statusParamRaw
+    : "";
+
+  const stageParam = (DEFAULT_STAGES as readonly string[]).includes(stageParamRaw)
+    ? stageParamRaw
+    : "";
 
   useEffect(() => {
     const loadRecords = async () => {
@@ -85,18 +58,12 @@ export function CandidatesListView() {
     void loadRecords();
   }, []);
 
-  const availableStatuses = useMemo(() => {
-    return Array.from(new Set([...DEFAULT_STATUSES, ...records.map((r) => r.status)]));
-  }, [records]);
-
-  const availableStages = useMemo(() => {
-    return Array.from(new Set([...DEFAULT_STAGES, ...records.map((r) => r.stage)]));
-  }, [records]);
-
   const filteredRecords = useMemo(() => {
     return records.filter((record) => {
-      const matchStatus = !statusParam || record.status === statusParam;
-      const matchStage = !stageParam || record.stage === stageParam;
+      const normalizedStatus = normalizeStatus(record.status);
+      const normalizedStage = normalizeStage(record.stage);
+      const matchStatus = !statusParam || normalizedStatus === statusParam;
+      const matchStage = !stageParam || normalizedStage === stageParam;
       const normalizedSearch = queryParam.trim().toLowerCase();
 
       const matchSearch =
@@ -145,7 +112,7 @@ export function CandidatesListView() {
                 onChange={(event) => updateQueryParam("status", event.target.value)}
               >
                 <option value="">Todos</option>
-                {availableStatuses.map((status) => (
+                {DEFAULT_STATUSES.map((status) => (
                   <option key={status} value={status}>
                     {statusLabel(status)}
                   </option>
@@ -161,7 +128,7 @@ export function CandidatesListView() {
                 onChange={(event) => updateQueryParam("stage", event.target.value)}
               >
                 <option value="">Todas</option>
-                {availableStages.map((stage) => (
+                {DEFAULT_STAGES.map((stage) => (
                   <option key={stage} value={stage}>
                     {stageLabel(stage)}
                   </option>

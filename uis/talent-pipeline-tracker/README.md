@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Talent Pipeline Tracker (Hito 3)
 
-## Getting Started
+Aplicacion Next.js (App Router + TypeScript) para gestionar candidaturas de Nexova:
 
-First, run the development server:
+- Listado de candidaturas con filtros por estado y etapa.
+- Busqueda por nombre o email sin recarga.
+- Vista de detalle por candidato.
+- Edicion de datos, actualizacion de estado/etapa y gestion de notas.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Requisitos de entorno
+
+Crear un archivo `.env.local` en esta carpeta con:
+
+```env
+NEXT_PUBLIC_API_URL=https://playground.4geeks.com/tracker/api/v1
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+npm run build
+npm run lint
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Catalogo oficial del dominio
 
-## Learn More
+Para cumplir el Context del Hito 3, la app usa unicamente:
 
-To learn more about Next.js, take a look at the following resources:
+- `status`: `received`, `in_progress`, `selected`, `discarded`
+- `stage`: `pending`, `review`, `personal_interview`, `technical_interview`, `offer_presented`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Etiquetas visibles en UI (siempre legibles):
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `status`: Recibida, En proceso, Seleccionada, Descartada
+- `stage`: Pendiente, Revision, Entrevista personal, Entrevista tecnica, Oferta presentada
 
-## Deploy on Vercel
+## Normalizacion legacy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Aunque el catalogo oficial es el anterior, el frontend mantiene una normalizacion defensiva para evitar mostrar valores crudos si la API devolviera datos antiguos:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `hired` -> `selected`
+- `rejected` -> `discarded`
+- `interview` -> `personal_interview`
+- `offer` -> `offer_presented`
+- `closed` -> `review`
+
+Fallback para valores desconocidos:
+
+- `status` desconocido -> `received`
+- `stage` desconocido -> `pending`
+
+## Revision del backend (endpoint `/records`)
+
+Se reviso el endpoint publico configurado en `.env.local` y actualmente devuelve valores alineados al catalogo oficial.
+
+Combinaciones unicas observadas (sample con `limit=200`):
+
+- `received` + `pending`
+- `in_progress` + `review`
+- `in_progress` + `personal_interview`
+- `in_progress` + `technical_interview`
+- `selected` + `personal_interview`
+- `discarded` + `review`
+- `discarded` + `personal_interview`
+- `discarded` + `technical_interview`
+
+Conclusion tecnica:
+
+- Hoy el backend ya responde con valores oficiales en `/records`.
+- Se mantiene la normalizacion frontend para robustez y compatibilidad ante datos historicos o respuestas no normalizadas en otros endpoints.

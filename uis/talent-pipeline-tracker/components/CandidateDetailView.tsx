@@ -13,53 +13,20 @@ import {
 } from "@/services/tracker-api";
 import {
   CandidateFormValues,
+  CandidateStage,
+  CandidateStatus,
   CandidateNote,
   CandidateRecord,
   DEFAULT_STAGES,
   DEFAULT_STATUSES,
+  normalizeStage,
+  normalizeStatus,
+  stageLabel,
+  statusLabel,
 } from "@/types/tracker";
 
 interface CandidateDetailViewProps {
   id: string;
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  received: "Recibida",
-  in_progress: "En proceso",
-  hired: "Contratada",
-  rejected: "Rechazada",
-  selected: "Seleccionada",
-  discarded: "Descartada",
-};
-
-const STAGE_LABELS: Record<string, string> = {
-  pending: "Pendiente",
-  review: "Revision",
-  interview: "Entrevista",
-  offer: "Oferta",
-  closed: "Cerrada",
-  personal_interview: "Entrevista personal",
-  technical_interview: "Entrevista tecnica",
-  offer_presented: "Oferta presentada",
-};
-
-function normalizeKey(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, "_");
-}
-
-function toHumanLabel(value: string) {
-  return value
-    .split("_")
-    .map((part) => part[0]?.toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function statusLabel(value: string) {
-  return STATUS_LABELS[normalizeKey(value)] ?? toHumanLabel(value);
-}
-
-function stageLabel(value: string) {
-  return STAGE_LABELS[normalizeKey(value)] ?? toHumanLabel(value);
 }
 
 export function CandidateDetailView({ id }: CandidateDetailViewProps) {
@@ -116,21 +83,13 @@ export function CandidateDetailView({ id }: CandidateDetailViewProps) {
     };
   }, [record]);
 
-  const statusOptions = useMemo(() => {
-    if (!record?.status) {
-      return DEFAULT_STATUSES;
-    }
-    return Array.from(new Set([record.status, ...DEFAULT_STATUSES]));
-  }, [record]);
+  const statusOptions = DEFAULT_STATUSES;
+  const stageOptions = DEFAULT_STAGES;
 
-  const stageOptions = useMemo(() => {
-    if (!record?.stage) {
-      return DEFAULT_STAGES;
-    }
-    return Array.from(new Set([record.stage, ...DEFAULT_STAGES]));
-  }, [record]);
-
-  async function patchStatusOrStage(payload: { status?: string; stage?: string }) {
+  async function patchStatusOrStage(payload: {
+    status?: CandidateStatus;
+    stage?: CandidateStage;
+  }) {
     if (!record) {
       return;
     }
@@ -287,7 +246,11 @@ export function CandidateDetailView({ id }: CandidateDetailViewProps) {
               <select
                 value={record.status}
                 className="rounded-md border border-border bg-white px-3 py-2"
-                onChange={(event) => void patchStatusOrStage({ status: event.target.value })}
+                onChange={(event) =>
+                  void patchStatusOrStage({
+                    status: normalizeStatus(event.target.value),
+                  })
+                }
                 disabled={savingPatch}
               >
                 {statusOptions.map((status) => (
@@ -303,7 +266,11 @@ export function CandidateDetailView({ id }: CandidateDetailViewProps) {
               <select
                 value={record.stage}
                 className="rounded-md border border-border bg-white px-3 py-2"
-                onChange={(event) => void patchStatusOrStage({ stage: event.target.value })}
+                onChange={(event) =>
+                  void patchStatusOrStage({
+                    stage: normalizeStage(event.target.value),
+                  })
+                }
                 disabled={savingPatch}
               >
                 {stageOptions.map((stage) => (
