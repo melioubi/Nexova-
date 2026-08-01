@@ -34,7 +34,7 @@ export default function ContactSection() {
 
             <div className="mt-12 space-y-8">
               <div className="flex gap-4">
-                <div className="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-xl flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 bg-nexova-100 text-nexova-700 rounded-xl flex items-center justify-center shrink-0">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -50,7 +50,7 @@ export default function ContactSection() {
               </div>
 
               <div className="flex gap-4">
-                <div className="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-xl flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 bg-nexova-100 text-nexova-700 rounded-xl flex items-center justify-center shrink-0">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
@@ -65,7 +65,7 @@ export default function ContactSection() {
               </div>
 
               <div className="flex gap-4">
-                <div className="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-xl flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 bg-nexova-100 text-nexova-700 rounded-xl flex items-center justify-center shrink-0">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
@@ -95,7 +95,7 @@ export default function ContactSection() {
               </p>
               <button
                 onClick={() => { setSubmitted(false); setFormData({ nombre: "", email: "", empresa: "", pais: "Chile", servicio: "", mensaje: "" }); }}
-                className="mt-6 text-indigo-700 font-semibold hover:text-indigo-800 transition-colors"
+                className="mt-6 text-nexova-700 font-semibold hover:text-nexova-800 transition-colors"
               >
                 Enviar otro mensaje
               </button>
@@ -111,7 +111,7 @@ export default function ContactSection() {
                     required
                     value={formData.nombre}
                     onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-colors"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-nexova-400 focus:ring-2 focus:ring-nexova-100 outline-none transition-colors"
                     placeholder="Tu nombre"
                   />
                 </div>
@@ -123,7 +123,7 @@ export default function ContactSection() {
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-colors"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-nexova-400 focus:ring-2 focus:ring-nexova-100 outline-none transition-colors"
                     placeholder="tu@email.com"
                   />
                 </div>
@@ -137,7 +137,7 @@ export default function ContactSection() {
                     type="text"
                     value={formData.empresa}
                     onChange={(e) => setFormData({ ...formData, empresa: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-colors"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-nexova-400 focus:ring-2 focus:ring-nexova-100 outline-none transition-colors"
                     placeholder="Nombre de tu empresa"
                   />
                 </div>
@@ -147,7 +147,7 @@ export default function ContactSection() {
                     id="pais"
                     value={formData.pais}
                     onChange={(e) => setFormData({ ...formData, pais: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-colors bg-white"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-nexova-400 focus:ring-2 focus:ring-nexova-100 outline-none transition-colors bg-white"
                   >
                     {countries.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -160,7 +160,7 @@ export default function ContactSection() {
                   id="servicio"
                   value={formData.servicio}
                   onChange={(e) => setFormData({ ...formData, servicio: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-colors bg-white"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-nexova-400 focus:ring-2 focus:ring-nexova-100 outline-none transition-colors bg-white"
                 >
                   <option value="">Selecciona un servicio</option>
                   <option value="executive-search">Executive Search</option>
@@ -180,14 +180,14 @@ export default function ContactSection() {
                   rows={4}
                   value={formData.mensaje}
                   onChange={(e) => setFormData({ ...formData, mensaje: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-colors resize-none"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-nexova-400 focus:ring-2 focus:ring-nexova-100 outline-none transition-colors resize-none"
                   placeholder="Cuéntanos sobre tu necesidad de talento..."
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-indigo-700 text-white py-3.5 rounded-xl font-semibold hover:bg-indigo-800 transition-colors shadow-lg shadow-indigo-200"
+                className="w-full bg-nexova-600 text-white py-3.5 rounded-xl font-semibold hover:bg-nexova-700 transition-colors shadow-lg shadow-nexova-200"
               >
                 Enviar mensaje
               </button>

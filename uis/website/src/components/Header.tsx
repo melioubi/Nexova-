@@ -20,7 +20,11 @@ export default function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-indigo-700">Nexova</span>
+            <svg className="w-9 h-9 text-nexova-600" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+              <rect width="40" height="40" rx="8" fill="currentColor" fillOpacity="0.1"/>
+              <path d="M10 28V12h4.5l5.5 9.5L25.5 12H30v16h-3.5V18l-5.5 9.5h-2L13.5 18v10H10z" fill="currentColor"/>
+            </svg>
+            <span className="text-xl font-bold text-nexova-900 tracking-tight">Nexova</span>
             <span className="hidden sm:inline text-sm text-gray-500 border-l border-gray-300 pl-3">
               Consultoría de Talento
             </span>
@@ -32,14 +36,14 @@ export default function Header() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-sm font-medium text-gray-600 hover:text-indigo-700 transition-colors"
+                className="text-sm font-medium text-gray-600 hover:text-nexova-600 transition-colors"
               >
                 {link.label}
               </Link>
             ))}
             <Link
               href="#contacto"
-              className="bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-800 transition-colors"
+              className="bg-nexova-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-nexova-700 transition-colors"
             >
               Solicitar asesoría
             </Link>
@@ -48,7 +52,7 @@ export default function Header() {
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 text-gray-600 hover:text-indigo-700"
+            className="md:hidden p-2 text-gray-600 hover:text-nexova-600"
             aria-label="Abrir menú"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,7 +73,7 @@ export default function Header() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className="text-sm font-medium text-gray-600 hover:text-indigo-700 transition-colors px-2 py-1"
+                className="text-sm font-medium text-gray-600 hover:text-nexova-600 transition-colors px-2 py-1"
               >
                 {link.label}
               </Link>
@@ -77,7 +81,7 @@ export default function Header() {
             <Link
               href="#contacto"
               onClick={() => setMobileOpen(false)}
-              className="bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-800 transition-colors text-center"
+              className="bg-nexova-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-nexova-700 transition-colors text-center"
             >
               Solicitar asesoría
             </Link>

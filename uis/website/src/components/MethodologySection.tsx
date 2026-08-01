@@ -3,37 +3,37 @@ const steps = [
     number: "01",
     title: "Diagnóstico",
     description: "Analizamos la cultura organizacional, necesidades de talento y brechas del cliente mediante entrevistas y data.",
-    color: "bg-indigo-100 text-indigo-700",
+    color: "bg-nexova-100 text-nexova-700",
   },
   {
     number: "02",
     title: "Estrategia",
     description: "Diseñamos un plan de búsqueda personalizado con perfil de competencias, fuentes de talento y cronograma.",
-    color: "bg-purple-100 text-purple-700",
+    color: "bg-nexova-200 text-nexova-800",
   },
   {
     number: "03",
     title: "Búsqueda y Selección",
     description: "Ejecutamos la búsqueda multicanal con evaluación psicométrica y por competencias de cada candidato.",
-    color: "bg-blue-100 text-blue-700",
+    color: "bg-nexova-300 text-nexova-800",
   },
   {
     number: "04",
     title: "Presentación",
     description: "Entregamos una shortlist de candidatos evaluados con informes detallados para la decisión final del cliente.",
-    color: "bg-teal-100 text-teal-700",
+    color: "bg-nexova-400 text-white",
   },
   {
     number: "05",
     title: "Acompañamiento",
     description: "Soporte durante el proceso de oferta, negociación y onboarding para asegurar una integración exitosa.",
-    color: "bg-emerald-100 text-emerald-700",
+    color: "bg-nexova-700 text-nexova-200",
   },
   {
     number: "06",
     title: "Seguimiento",
     description: "Evaluamos la retención y desempeño a los 3, 6 y 12 meses, ajustando la estrategia según resultados.",
-    color: "bg-amber-100 text-amber-700",
+    color: "bg-nexova-950 text-nexova-200",
   },
 ];
 
@@ -68,11 +68,11 @@ export default function MethodologySection() {
         </div>
 
         {/* SLA highlight */}
-        <div className="mt-16 bg-indigo-700 rounded-2xl p-8 md:p-12 text-center text-white">
+        <div className="mt-16 bg-nexova-700 rounded-2xl p-8 md:p-12 text-center text-white">
           <p className="text-2xl md:text-3xl font-bold">
-            SLA de contratación ejecutiva: <span className="text-indigo-200">45 días hábiles</span>
+            SLA de contratación ejecutiva: <span className="text-nexova-200">45 días hábiles</span>
           </p>
-          <p className="mt-3 text-indigo-200 text-lg">
+          <p className="mt-3 text-nexova-200 text-lg">
             Nuestro compromiso con la velocidad sin sacrificar calidad.
           </p>
         </div>

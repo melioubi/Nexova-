@@ -35,9 +35,9 @@ function StatCard({ title, value, sub }: { title: string; value: string | number
   );
 }
 
-function Badge({ children, color = 'indigo' }: { children: React.ReactNode; color?: string }) {
+function Badge({ children, color = 'nexova' }: { children: React.ReactNode; color?: string }) {
   const colors: Record<string, string> = {
-    indigo: 'bg-indigo-100 text-indigo-800',
+    nexova: 'bg-nexova-100 text-nexova-800',
     green: 'bg-green-100 text-green-800',
     yellow: 'bg-yellow-100 text-yellow-800',
     red: 'bg-red-100 text-red-800',
@@ -45,7 +45,7 @@ function Badge({ children, color = 'indigo' }: { children: React.ReactNode; colo
     gray: 'bg-gray-100 text-gray-800',
   };
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[color] || colors.indigo}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[color] || colors.nexova}`}>
       {children}
     </span>
   );
@@ -132,7 +132,7 @@ export default function DashboardPage() {
           <StatCard title="Candidatos" value={sampleCandidates.length} />
           <StatCard title="Vacantes Activas" value={1} sub={sampleVacancy.title} />
           <StatCard title="Procesos" value={sampleSelectionProcesses.length} />
-          <StatCard title="Salario Promedio" value={`$${avgSalary.toLocaleString()}`} sub="USD/mes" />
+          <StatCard title="Salario Promedio" value={`$${avgSalary.toLocaleString('es-CL')}`} sub="USD/mes" />
           <StatCard title="Tasa de Colocación" value={`${fillRate}%`} />
           <StatCard
             title="Score Máximo"
@@ -156,7 +156,7 @@ export default function DashboardPage() {
               onClick={() => setActiveTab(tab.key as typeof activeTab)}
               className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.key
-                  ? 'border-indigo-600 text-indigo-600'
+                  ? 'border-nexova-600 text-nexova-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -174,7 +174,7 @@ export default function DashboardPage() {
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Matching Candidates —{' '}
-              <span className="text-indigo-600">{sampleVacancy.title}</span>
+              <span className="text-nexova-600">{sampleVacancy.title}</span>
             </h3>
             <p className="text-sm text-gray-500 mb-4">
               Basado en skills, experiencia, seniority, inglés y salario (máx. 100 pts)
@@ -196,7 +196,7 @@ export default function DashboardPage() {
                         </div>
                         <p className="text-sm text-gray-500 mt-0.5">{c.email} · {c.location}</p>
                       </div>
-                      <span className="text-2xl font-bold text-indigo-600">{entry.score}%</span>
+                      <span className="text-2xl font-bold text-nexova-600">{entry.score}%</span>
                     </div>
                     <Bar value={entry.score} />
                     <div className="flex flex-wrap gap-2 mt-3">
@@ -216,7 +216,7 @@ export default function DashboardPage() {
                       </div>
                       <div>
                         <span className="font-medium text-gray-700">Salario esperado:</span>{' '}
-                        ${c.expectedSalary.toLocaleString()}
+                        ${c.expectedSalary.toLocaleString('es-CL')}
                       </div>
                     </div>
                   </div>
@@ -239,7 +239,7 @@ export default function DashboardPage() {
                   <span className="text-sm font-medium text-gray-700 w-28">{level}</span>
                   <div className="flex-1 bg-gray-100 rounded-full h-3">
                     <div
-                      className="bg-indigo-500 h-3 rounded-full transition-all"
+                      className="bg-nexova-500 h-3 rounded-full transition-all"
                       style={{ width: `${(count / sampleCandidates.length) * 100}%` }}
                     />
                   </div>
@@ -303,12 +303,12 @@ export default function DashboardPage() {
                   <path
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                     fill="none"
-                    stroke="#4f46e5"
+                    stroke="#2a6a6c"
                     strokeWidth="3"
                     strokeDasharray={`${fillRate}, 100`}
                   />
                 </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-xl font-bold text-indigo-600">
+                <span className="absolute inset-0 flex items-center justify-center text-xl font-bold text-nexova-600">
                   {fillRate}%
                 </span>
               </div>
@@ -336,7 +336,7 @@ export default function DashboardPage() {
                   value={skillFilter}
                   onChange={(e) => setSkillFilter(e.target.value)}
                   placeholder="Ej: TypeScript, React"
-                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-nexova-200 focus:border-nexova-400 outline-none"
                 />
               </div>
 
@@ -345,7 +345,7 @@ export default function DashboardPage() {
                 <select
                   value={seniorityFilter}
                   onChange={(e) => setSeniorityFilter(e.target.value)}
-                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-nexova-200 outline-none"
                 >
                   <option value="">Todos</option>
                   <option value="Junior">Junior</option>
@@ -359,7 +359,7 @@ export default function DashboardPage() {
                 <select
                   value={sortOrder}
                   onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-nexova-200 outline-none"
                 >
                   <option value="desc">Mayor a menor</option>
                   <option value="asc">Menor a mayor</option>
@@ -401,7 +401,7 @@ export default function DashboardPage() {
                           ))}
                         </div>
                       </td>
-                      <td className="py-3 px-2 text-right font-medium">${c.expectedSalary.toLocaleString()}</td>
+                      <td className="py-3 px-2 text-right font-medium">${c.expectedSalary.toLocaleString('es-CL')}</td>
                       <td className="py-3 px-2">{c.availability}</td>
                     </tr>
                   ))}
@@ -428,11 +428,11 @@ export default function DashboardPage() {
                 onChange={(e) => setSearchId(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="ID (C-2024-0451) o email..."
-                className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-nexova-200 focus:border-nexova-400 outline-none"
               />
               <button
                 onClick={handleSearch}
-                className="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                className="px-5 py-2 bg-nexova-600 text-white text-sm font-medium rounded-lg hover:bg-nexova-700 transition-colors"
               >
                 Buscar
               </button>

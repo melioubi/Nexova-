@@ -79,9 +79,9 @@ export default function ServicesSection() {
           {services.map((service) => (
             <div
               key={service.title}
-              className="group bg-white rounded-2xl p-8 border border-gray-100 hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-50 transition-all duration-300"
+              className="group bg-white rounded-2xl p-8 border border-gray-100 hover:border-nexova-200 hover:shadow-lg hover:shadow-nexova-50 transition-all duration-300"
             >
-              <div className="w-14 h-14 bg-indigo-50 text-indigo-700 rounded-xl flex items-center justify-center group-hover:bg-indigo-700 group-hover:text-white transition-colors duration-300">
+              <div className="w-14 h-14 bg-nexova-50 text-nexova-700 rounded-xl flex items-center justify-center group-hover:bg-nexova-600 group-hover:text-white transition-colors duration-300">
                 {service.icon}
               </div>
               <h3 className="mt-6 text-lg font-semibold text-gray-900">{service.title}</h3>
@@ -100,7 +100,7 @@ export default function ServicesSection() {
         <div className="text-center mt-12">
           <Link
             href="#contacto"
-            className="inline-flex items-center gap-2 text-indigo-700 font-semibold hover:text-indigo-800 transition-colors"
+            className="inline-flex items-center gap-2 text-nexova-700 font-semibold hover:text-nexova-800 transition-colors"
           >
             ¿Necesitas un servicio personalizado?
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

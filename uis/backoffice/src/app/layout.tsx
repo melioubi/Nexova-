@@ -1,11 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
 
 export const metadata: Metadata = {
   title: "Nexova — Backoffice Interno",
@@ -18,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${inter.variable} h-full`}>
+    <html lang="es" className="h-full">
       <body className="h-full font-sans antialiased bg-gray-50">
         <div className="flex h-full">
           {/* Sidebar */}
@@ -28,7 +22,7 @@ export default function RootLayout({
               <p className="text-sm text-gray-400 mt-1">Backoffice Interno</p>
             </div>
             <nav className="flex-1 p-4 space-y-1">
-              <a href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium">
+              <a href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-nexova-600 text-white text-sm font-medium">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
@@ -55,7 +49,7 @@ export default function RootLayout({
             </nav>
             <div className="p-4 border-t border-gray-800">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold">
+                <div className="w-8 h-8 rounded-full bg-nexova-600 flex items-center justify-center text-xs font-bold">
                   AS
                 </div>
                 <div className="text-sm">
