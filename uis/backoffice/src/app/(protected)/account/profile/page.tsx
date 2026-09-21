@@ -46,6 +46,9 @@ export default function ProfilePage() {
           {status && <p className="status">{status}</p>}
           <button className="button" type="submit">Guardar cambios</button>
         </form>
+        <p className="nav-links">
+          <Link href="/account/change-password">Cambiar contraseña</Link>
+        </p>
       </section>
     </main>
   );

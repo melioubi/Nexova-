@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ApiError, login } from "@/lib/api";
 import { saveToken } from "@/lib/auth";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const resetSuccess = searchParams.get("reset") === "success";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -32,14 +35,27 @@ export default function LoginPage() {
       <section className="form-panel">
         <p className="brand">Nexova</p>
         <h1>Iniciar sesión</h1>
+        {resetSuccess && <p className="status">Contraseña restablecida correctamente. Ahora puedes iniciar sesión.</p>}
         <form onSubmit={handleSubmit}>
           <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
-          <label>Contraseña<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+          <label>
+            Contraseña
+            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+          </label>
+          <p className="field-link"><Link href="/forgot-password">¿Olvidaste tu contraseña?</Link></p>
           {error && <p className="error" role="alert">{error}</p>}
           <button className="button" disabled={submitting} type="submit">{submitting ? "Accediendo..." : "Acceder"}</button>
         </form>
         <p className="muted">¿No tienes cuenta? <Link href="/register">Regístrate</Link></p>
       </section>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<main className="auth-page"><section className="form-panel"><p className="brand">Nexova</p></section></main>}>
+      <LoginForm />
+    </Suspense>
   );
 }
