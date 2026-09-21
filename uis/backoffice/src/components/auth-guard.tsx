@@ -1,25 +1,23 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getToken } from "@/lib/auth";
-
-function subscribe() {
-  return () => {};
-}
-
-function getServerSnapshot() {
-  return false;
-}
+import { getMyProfile } from "@/lib/api";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const authenticated = useSyncExternalStore(subscribe, () => Boolean(getToken()), getServerSnapshot);
+  const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
     if (!getToken()) {
       router.replace("/login");
+      return;
     }
+
+    getMyProfile()
+      .then(() => setAuthenticated(true))
+      .catch(() => router.replace("/login"));
   }, [router]);
 
   useEffect(() => {
