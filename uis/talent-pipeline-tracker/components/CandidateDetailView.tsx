@@ -43,29 +43,29 @@ export function CandidateDetailView({ id }: CandidateDetailViewProps) {
   const [notesLoading, setNotesLoading] = useState(false);
 
   useEffect(() => {
-    startTransition(() => {
-      void (async () => {
-        setError(null);
-        setLoading(true);
-        try {
-          const [recordResponse, notesResponse] = await Promise.all([
-            getRecordById(id),
-            getRecordNotes(id),
-          ]);
-          setRecord(recordResponse);
-          setNotes(notesResponse.data);
-        } catch (loadError) {
-          const message =
-            loadError instanceof Error
-              ? loadError.message
-              : "No se pudo cargar el detalle.";
-          setError(message);
-        } finally {
-          setLoading(false);
-        }
-      })();
-    });
+    void loadData();
   }, [id]);
+
+  async function loadData() {
+    setError(null);
+    setLoading(true);
+    try {
+      const [recordResponse, notesResponse] = await Promise.all([
+        getRecordById(id),
+        getRecordNotes(id),
+      ]);
+      setRecord(recordResponse);
+      setNotes(notesResponse.data);
+    } catch (loadError) {
+      const message =
+        loadError instanceof Error
+          ? loadError.message
+          : "No se pudo cargar el detalle.";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const editInitialValues = useMemo<CandidateFormValues | undefined>(() => {
     if (!record) {
@@ -172,9 +172,19 @@ export function CandidateDetailView({ id }: CandidateDetailViewProps) {
           <Link href="/" className="text-sm font-medium text-primary hover:underline">
             Volver al listado
           </Link>
-          <p className="mt-4 rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
-            {error ?? "No se encontro la candidatura."}
-          </p>
+          <div className="mt-4 flex flex-col gap-3">
+            <p className="rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
+              {error ?? "No se encontro la candidatura."}
+            </p>
+            {error ? (
+              <button
+                className="self-start rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
+                onClick={() => void loadData()}
+              >
+                Reintentar
+              </button>
+            ) : null}
+          </div>
         </div>
       </main>
     );
@@ -283,7 +293,13 @@ export function CandidateDetailView({ id }: CandidateDetailViewProps) {
           </div>
 
           {patchFeedback ? (
-            <p className="mt-3 rounded-md bg-warn-soft px-3 py-2 text-sm text-foreground">
+            <p
+              className={`mt-3 rounded-md px-3 py-2 text-sm ${
+                patchFeedback === "Cambio aplicado correctamente."
+                  ? "bg-ok-soft text-ok"
+                  : "bg-danger-soft text-danger"
+              }`}
+            >
               {patchFeedback}
             </p>
           ) : null}

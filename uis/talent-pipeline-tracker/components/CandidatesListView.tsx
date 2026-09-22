@@ -38,25 +38,25 @@ export function CandidatesListView() {
     : "";
 
   useEffect(() => {
-    const loadRecords = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await getRecords();
-        setRecords(response.data);
-      } catch (loadError) {
-        const message =
-          loadError instanceof Error
-            ? loadError.message
-            : "No fue posible cargar candidaturas.";
-        setError(message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     void loadRecords();
   }, []);
+
+  async function loadRecords() {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await getRecords();
+      setRecords(response.data);
+    } catch (loadError) {
+      const message =
+        loadError instanceof Error
+          ? loadError.message
+          : "No fue posible cargar candidaturas.";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const filteredRecords = useMemo(() => {
     return records.filter((record) => {
@@ -87,8 +87,16 @@ export function CandidatesListView() {
   }
 
   async function handleCreate(payload: Parameters<typeof createRecord>[0]) {
-    const created = await createRecord(payload);
-    setRecords((prev) => [created, ...prev]);
+    try {
+      const created = await createRecord(payload);
+      setRecords((prev) => [created, ...prev]);
+    } catch (createError) {
+      const message =
+        createError instanceof Error
+          ? createError.message
+          : "No se pudo crear la candidatura.";
+      setError(message);
+    }
   }
 
   return (
@@ -166,9 +174,17 @@ export function CandidatesListView() {
         <section className="rounded-2xl border border-border bg-surface p-5">
           {loading ? <p className="text-sm text-muted">Cargando candidaturas...</p> : null}
           {error ? (
-            <p className="rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
-              {error}
-            </p>
+            <div className="flex flex-col gap-3">
+              <p className="rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
+                {error}
+              </p>
+              <button
+                className="self-start rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast"
+                onClick={() => void loadRecords()}
+              >
+                Reintentar
+              </button>
+            </div>
           ) : null}
           {!loading && !error ? (
             <p className="mb-3 rounded-md bg-ok-soft px-3 py-2 text-sm text-ok">
