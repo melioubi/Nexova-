@@ -23,12 +23,18 @@ def create_access_token(user_id: str) -> str:
         minutes=settings.access_token_expire_minutes
     )
     payload = {"sub": user_id, "exp": expires_at}
-    return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
+    try:
+        return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
+    except Exception as e:
+        raise RuntimeError("Failed to generate access token.") from e
 
 
 def decode_access_token(token: str) -> str:
     settings = get_settings()
-    payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+    except Exception as e:
+        raise JWTError("Token validation failed") from e
     user_id = payload.get("sub")
     if not isinstance(user_id, str) or not user_id:
         raise JWTError("Token subject is missing")

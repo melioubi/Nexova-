@@ -1,2 +1,2 @@
 def main() -> None:
-    print("Hello from api!")
+    """Entry point placeholder for the api package."""

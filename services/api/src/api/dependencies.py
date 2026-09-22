@@ -22,7 +22,14 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> dict:
     except JWTError as error:
         raise credentials_exception from error
 
-    user = get_user_by_id(user_id)
-    if user is None or not user["is_active"]:
+    try:
+        user = get_user_by_id(user_id)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authentication service unavailable",
+        )
+
+    if user is None or not user.get("is_active", False):
         raise credentials_exception
     return user

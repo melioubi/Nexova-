@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 from api.auth.router import router as auth_router
 from api.domains.router import build_domain_router
@@ -10,6 +11,19 @@ app = FastAPI(
     title="Nexova API",
     version="0.1.0",
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Return a safe JSON response for any unhandled exception — no tracebacks leaked.
+    HTTPExceptions are intentionally re-raised so FastAPI's built-in handler manages them
+    and preserves the original status code and detail."""
+    if isinstance(exc, HTTPException):
+        raise exc
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
 
 app.include_router(auth_router)
 app.include_router(users_router)

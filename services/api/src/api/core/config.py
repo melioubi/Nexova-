@@ -25,4 +25,9 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    try:
+        return Settings()
+    except Exception as e:
+        raise RuntimeError(
+            "Application configuration is invalid. Ensure .env exists with SECRET_KEY set."
+        ) from e

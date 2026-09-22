@@ -19,16 +19,25 @@ router = APIRouter(prefix="/users", tags=["users"])
 def register_user(user_data: UserCreate) -> dict:
     try:
         user = create_user(user_data)
+        try:
+            create_profile(
+                user["id"],
+                ProfileCreate(
+                    name=user_data.name,
+                    phone=user_data.phone,
+                    address=user_data.address,
+                ),
+            )
+        except Exception:
+            delete_user(user["id"])
+            raise
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
-    create_profile(
-        user["id"],
-        ProfileCreate(
-            name=user_data.name,
-            phone=user_data.phone,
-            address=user_data.address,
-        ),
-    )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not create user. Please try again.",
+        )
     return user
 
 
@@ -62,6 +71,11 @@ def edit_user(
         user = update_user(user_id, user_data)
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not update user. Please try again.",
+        )
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user
