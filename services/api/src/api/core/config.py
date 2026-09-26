@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -14,6 +15,10 @@ class Settings(BaseSettings):
     tinydb_path: str = Field(
         default="data/auth",
         validation_alias="TINYDB_PATH",
+    )
+    database_url: Optional[str] = Field(
+        default=None,
+        validation_alias="DATABASE_URL",
     )
 
     model_config = SettingsConfigDict(
