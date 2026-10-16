@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexova Hito 2 - Pruebas de utilidades TypeScript</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 text-slate-900">
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <header class="mb-8">
+      <h1 class="text-3xl font-bold">Nexova - Hito 2 (Fundamentos de Programación)</h1>
+      <p class="mt-2 text-slate-600">Panel de pruebas manuales para filtrado, ordenamiento, búsqueda, reportes y validaciones.</p>
+      <p class="mt-2 text-xs text-slate-500">Salida en formato JSON para inspección de resultados durante desarrollo.</p>
+    </header>
+
+    <section class="grid lg:grid-cols-3 gap-6">
+      <article class="bg-white rounded-xl p-5 shadow-sm border border-slate-200 space-y-4">
+        <h2 class="text-lg font-semibold">Filtrar registros</h2>
+        <label class="block text-sm font-medium">Sector</label>
+        <select id="filtro-sector" class="w-full border rounded px-3 py-2">
+          <option value="">Todos</option>
+          <option value="Tecnología">Tecnología</option>
+          <option value="Retail">Retail</option>
+          <option value="Servicios Financieros">Servicios Financieros</option>
+          <option value="Consultoría">Consultoría</option>
+          <option value="Otro">Otro</option>
+        </select>
+
+        <label class="block text-sm font-medium">País</label>
+        <select id="filtro-pais" class="w-full border rounded px-3 py-2">
+          <option value="">Todos</option>
+          <option value="España">España</option>
+          <option value="Estados Unidos">Estados Unidos</option>
+          <option value="Otro">Otro</option>
+        </select>
+
+        <button id="btn-filtrar" class="w-full bg-blue-600 text-white rounded px-3 py-2 font-medium">Ejecutar filtrado</button>
+      </article>
+
+      <article class="bg-white rounded-xl p-5 shadow-sm border border-slate-200 space-y-4">
+        <h2 class="text-lg font-semibold">Ordenar registros</h2>
+        <label class="block text-sm font-medium">Años de experiencia</label>
+        <select id="orden-experiencia" class="w-full border rounded px-3 py-2">
+          <option value="asc">Ascendente</option>
+          <option value="desc">Descendente</option>
+        </select>
+
+        <button id="btn-ordenar" class="w-full bg-indigo-600 text-white rounded px-3 py-2 font-medium">Ordenar por experiencia</button>
+        <button id="btn-ordenar-multiple" class="w-full bg-indigo-800 text-white rounded px-3 py-2 font-medium">Ordenar por sector + experiencia</button>
+      </article>
+
+      <article class="bg-white rounded-xl p-5 shadow-sm border border-slate-200 space-y-4">
+        <h2 class="text-lg font-semibold">Búsquedas</h2>
+
+        <label class="block text-sm font-medium">Búsqueda lineal por email</label>
+        <input id="input-correo" class="w-full border rounded px-3 py-2" placeholder="nombre@empresa.com" />
+        <button id="btn-busqueda-lineal" class="w-full bg-emerald-600 text-white rounded px-3 py-2 font-medium">Buscar en arreglo desordenado</button>
+
+        <label class="block text-sm font-medium">Búsqueda binaria por años</label>
+        <input id="input-anos" type="number" class="w-full border rounded px-3 py-2" placeholder="10" />
+        <button id="btn-busqueda-binaria" class="w-full bg-emerald-800 text-white rounded px-3 py-2 font-medium">Buscar en arreglo ordenado</button>
+      </article>
+    </section>
+
+    <section class="mt-6 grid lg:grid-cols-2 gap-6">
+      <article class="bg-white rounded-xl p-5 shadow-sm border border-slate-200 space-y-3">
+        <h2 class="text-lg font-semibold">Reportes y validaciones</h2>
+        <button id="btn-reporte" class="w-full bg-fuchsia-600 text-white rounded px-3 py-2 font-medium">Generar reporte agregado</button>
+        <button id="btn-validar" class="w-full bg-rose-600 text-white rounded px-3 py-2 font-medium">Probar validación con datos inválidos</button>
+      </article>
+
+      <article class="bg-slate-950 text-slate-100 rounded-xl p-5 shadow-sm border border-slate-800">
+        <h2 class="text-lg font-semibold mb-3">Salida</h2>
+        <pre id="output" class="text-xs md:text-sm overflow-x-auto whitespace-pre-wrap"></pre>
+      </article>
+    </section>
+  </main>
+
+  <script type="module" src="../dist/browser.js"></script>
+</body>
+</html>
