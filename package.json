@@ -1,0 +1,18 @@
+{
+  "name": "nexova-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monorepo Nexova — HR Tech platform",
+  "workspaces": [
+    "packages/*",
+    "uis/*"
+  ],
+  "scripts": {
+    "build:website": "npm run build -w uis/website",
+    "build:backoffice": "npm run build -w uis/backoffice",
+    "dev:website": "npm run dev -w uis/website",
+    "dev:backoffice": "npm run dev -w uis/backoffice",
+    "typecheck": "npm run typecheck -w packages/business-logic",
+    "lint": "npm run lint -w uis/website && npm run lint -w uis/backoffice"
+  }
+}
