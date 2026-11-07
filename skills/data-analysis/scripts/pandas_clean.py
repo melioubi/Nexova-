@@ -2,10 +2,26 @@
 Safe snippet for basic pandas cleaning. Copy and adapt for your dataset.
 Run: python pandas_clean.py  (ensure pandas is installed)
 """
+import sys
+
 import pandas as pd
 
-# Load (adjust path and kwargs as needed)
-df = pd.read_csv("data.csv")  # or read_json, read_excel
+try:
+    # Load (adjust path and kwargs as needed)
+    df = pd.read_csv("data.csv")  # or read_json, read_excel
+except FileNotFoundError:
+    print("Error: data.csv not found. Make sure the file exists.", file=sys.stderr)
+    sys.exit(1)
+except PermissionError:
+    print("Error: Permission denied when reading data.csv.", file=sys.stderr)
+    sys.exit(1)
+except pd.errors.ParserError as e:
+    print(f"Error: Could not parse data.csv: {e}", file=sys.stderr)
+    sys.exit(1)
+except Exception as e:
+    print(f"Error: Unexpected error reading data.csv: {e}", file=sys.stderr)
+    sys.exit(1)
+
 print("df_shape", df.shape)
 print("df_dtypes", df.dtypes)
 
