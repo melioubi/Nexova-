@@ -23,6 +23,8 @@ button { cursor: pointer; }
 .topbar { height: 74px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); }
 .wordmark { display: inline-flex; gap: 10px; align-items: center; color: var(--ink); text-decoration: none; font-size: 13px; font-weight: 700; letter-spacing: 0; }
 .mark { width: 28px; height: 28px; display: grid; place-items: center; color: var(--white); background: var(--green); font-family: var(--serif); font-size: 18px; }
+.primary-nav { margin-right: auto; margin-left: 42px; }
+.primary-nav a { padding: 8px 0; border-bottom: 1px solid var(--green); color: var(--green); font: 10px var(--mono); text-decoration: none; }
 .topbar-meta { display: flex; align-items: center; gap: 20px; color: var(--muted); font: 10px var(--mono); }
 .avatar { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid #d5d9cd; border-radius: 50%; color: var(--green); font: 10px var(--mono); background: #e8ebdf; }
 .intro { min-height: 285px; position: relative; display: flex; align-items: center; justify-content: space-between; overflow: hidden; border-bottom: 1px solid var(--line); }
@@ -63,7 +65,7 @@ h1 em { color: var(--green); font-weight: 500; }
 .filter-label select { min-width: 118px; height: 34px; padding: 0 30px 0 10px; border: 1px solid var(--line); border-radius: 0; color: var(--ink); background: var(--white); font: 11px var(--sans); }
 .filter-label:nth-child(2) select { min-width: 170px; }
 .clear-filters { height: 34px; padding: 0 8px; border: 0; color: var(--green); background: transparent; font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
-.table-wrap { overflow-x: auto; border-top: 1px solid #aeb5a8; background: var(--white); }
+.table-wrap { position: relative; overflow-x: auto; border-top: 1px solid #aeb5a8; background: var(--white); }
 table { width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap; }
 thead { background: #eeefe8; }
 th { height: 38px; padding: 0 12px; color: #6e766a; font: 9px var(--mono); }
@@ -119,6 +121,7 @@ tbody tr { animation: row-enter .35s ease both; }
 @media (max-width: 600px) {
   .shell { padding: 0 18px; }
   .topbar { height: 62px; }
+  .primary-nav { margin-left: 22px; }
   .topbar-meta > span:first-child { display: none; }
   .intro { min-height: 270px; align-items: end; }
   .intro-copy { padding: 48px 0 30px; }

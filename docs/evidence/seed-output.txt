@@ -1,0 +1,5 @@
+$ cd services/api
+$ uv run seed
+Seed completado: 15 proveedores insertados.
+$ uv run seed
+Seed completado: 0 proveedores insertados.

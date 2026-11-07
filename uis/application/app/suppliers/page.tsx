@@ -172,6 +172,9 @@ export default function SuppliersPage() {
         <a className="wordmark" href="/suppliers" aria-label="Nexova, directorio">
           <span className="mark">N</span><span>NEXOVA</span>
         </a>
+        <nav className="primary-nav" aria-label="Navegación principal">
+          <a href="/suppliers" aria-current="page">Proveedores</a>
+        </nav>
         <div className="topbar-meta"><span>OPERACIONES</span><span className="avatar">PS</span></div>
       </header>
 
