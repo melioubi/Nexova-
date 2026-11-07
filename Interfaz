@@ -96,16 +96,16 @@ El frontend del backoffice ya existe en tu monorepo. Estás añadiendo la secci�
 
 ## ✅ Qué Vamos a Evaluar
 
-- [ ] Existe un módulo de integración con la API dedicado — no hay llamadas `fetch` directas dentro de los componentes.
-- [ ] Todas las peticiones a endpoints protegidos incluyen la cabecera `Authorization` con el token del usuario actual.
-- [ ] La página de productos carga datos reales de la API y muestra `current_stock` con indicadores visuales de nivel de stock.
-- [ ] El formulario de orden de entrada envía correctamente y muestra una confirmación o un mensaje de error legible en cada resultado — sin fallos silenciosos.
-- [ ] El formulario de orden de salida muestra el stock actual del producto seleccionado de forma reactiva, antes de que el usuario envíe.
-- [ ] El formulario de orden de salida muestra una advertencia en el cliente cuando la cantidad introducida supera el stock disponible.
-- [ ] Una respuesta `400` del endpoint de salida muestra el mensaje de error de la API de forma visible en la interfaz.
-- [ ] La página de historial de órdenes muestra todas las órdenes con distinción entrada/salida, nombre de producto, cantidad, fecha y `user_uuid`.
-- [ ] Las cuatro páginas redirigen a los usuarios no autenticados al login.
-- [ ] Los nombres de entidades y etiquetas de campos en la interfaz coinciden con la especificación del BRIEFING.md.
+- [x] Existe un módulo de integración con la API dedicado — no hay llamadas `fetch` directas dentro de los componentes.
+- [x] Todas las peticiones a endpoints protegidos incluyen la cabecera `Authorization` con el token del usuario actual.
+- [x] La página de productos carga datos reales de la API y muestra `current_stock` con indicadores visuales de nivel de stock.
+- [x] El formulario de orden de entrada envía correctamente y muestra una confirmación o un mensaje de error legible en cada resultado — sin fallos silenciosos.
+- [x] El formulario de orden de salida muestra el stock actual del producto seleccionado de forma reactiva, antes de que el usuario envíe.
+- [x] El formulario de orden de salida muestra una advertencia en el cliente cuando la cantidad introducida supera el stock disponible.
+- [x] Una respuesta `400` del endpoint de salida muestra el mensaje de error de la API de forma visible en la interfaz.
+- [x] La página de historial de órdenes muestra todas las órdenes con distinción entrada/salida, nombre de producto, cantidad, fecha y `user_uuid`.
+- [x] Las cuatro páginas redirigen a los usuarios no autenticados al login.
+- [x] Los nombres de entidades y etiquetas de campos en la interfaz coinciden con la especificación del BRIEFING.md.
 
 ---
 
