@@ -1,5 +1,6 @@
 .env
 .env.local
+uis/application/
 .env.*.local
 .venv/
 __pycache__/

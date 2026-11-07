@@ -52,7 +52,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-gray-800 text-center text-sm text-gray-500">
+        <div className="mt-12 pt-8 border-t border-gray-800 text-center text-sm text-gray-300">
           <p>&copy; {new Date().getFullYear()} Nexova. Todos los derechos reservados.</p>
         </div>
       </div>

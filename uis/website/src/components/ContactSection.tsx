@@ -41,7 +41,7 @@ export default function ContactSection() {
                   </svg>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900">Oficinas</h4>
+                  <h3 className="font-semibold text-gray-900">Oficinas</h3>
                   <p className="text-gray-600 text-sm mt-1">
                     Av. Apoquindo 4500, Santiago, Chile<br />
                     Av. Corrientes 1234, Buenos Aires, Argentina
@@ -56,7 +56,7 @@ export default function ContactSection() {
                   </svg>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900">Email</h4>
+                  <h3 className="font-semibold text-gray-900">Email</h3>
                   <p className="text-gray-600 text-sm mt-1">
                     contacto@nexova.com<br />
                     talento@nexova.com
@@ -71,7 +71,7 @@ export default function ContactSection() {
                   </svg>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900">Teléfono</h4>
+                  <h3 className="font-semibold text-gray-900">Teléfono</h3>
                   <p className="text-gray-600 text-sm mt-1">
                     Chile: +56 2 2345 6789<br />
                     Argentina: +54 11 4567 8901

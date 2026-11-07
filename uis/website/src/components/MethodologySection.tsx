@@ -1,3 +1,5 @@
+import SectionHeading from "@/components/SectionHeading";
+
 const steps = [
   {
     number: "01",
@@ -21,7 +23,7 @@ const steps = [
     number: "04",
     title: "Presentación",
     description: "Entregamos una shortlist de candidatos evaluados con informes detallados para la decisión final del cliente.",
-    color: "bg-nexova-400 text-white",
+    color: "bg-nexova-500 text-white",
   },
   {
     number: "05",
@@ -41,12 +43,10 @@ export default function MethodologySection() {
   return (
     <section id="metodologia" className="py-24 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Nuestra Metodología</h2>
-          <p className="mt-4 text-lg text-gray-600">
-            Un proceso probado en 6 pasos que garantiza resultados consistentes y medibles.
-          </p>
-        </div>
+        <SectionHeading
+          title="Nuestra Metodología"
+          subtitle="Un proceso probado en 6 pasos que garantiza resultados consistentes y medibles."
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {steps.map((step, index) => (
