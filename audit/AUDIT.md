@@ -239,3 +239,46 @@ h1 (Hero)
   - Mobile: 375×812 (Móvil táctil genérico)
 - **Autenticación:** Backoffice protegido por login; la suite de auditoría inicia sesión antes de ejecutar Lighthouse (flujo OAuth2PasswordRequestForm)
 - **Artículos almacenados en:** `/audit/before/` (JSON, HTML, PNG, summary JSON)
+
+---
+
+## 7. Uso de Skills de Agente
+
+Como parte del proceso de corrección, se instalaron y ejecutaron skills de agente sobre ambos frontends para guiar la identificación de problemas de Core Web Vitals.
+
+### Skill instalada
+
+- **Skill:** `core-web-vitals` del repositorio `addyosmani/web-quality-skills`
+- **URL:** https://www.skills.sh/addyosmani/web-quality-skills/core-web-vitals
+- **Instalación:** `npx skills add https://github.com/addyosmani/web-quality-skills --skill core-web-vitals`
+- **Ejecución:** `npx skills use "https://github.com/addyosmani/web-quality-skills" --skill "core-web-vitals"`
+
+### Ejecución sobre ambos frontends
+
+La skill se ejecutó en ambos frontends (sitio corporativo en `http://localhost:3000/` y backoffice en `http://localhost:3001/`), cargando sus referencias de optimización y checklist de LCP.
+
+### Correcciones identificadas por la skill
+
+La skill proporcionó un checklist de optimización de LCP que se utilizó para verificar cada punto:
+
+| Item del checklist | Estado | Notas |
+|---|---|---|
+| TTFB < 800ms | ✅ Ya cumplido | Website: 10ms, Backoffice: 0ms |
+| LCP resource discoverable in HTML | ✅ Ya cumplido | Contenido texto renderizado en servidor |
+| LCP image optimized | ✅ No aplica | No hay imágenes LCP |
+| Critical CSS inlined < 14KB | ✅ Ya cumplido | Tailwind genera CSS inline mínimo |
+| No render-blocking JavaScript | ✅ Ya cumplido | Next.js maneja chunks de forma asíncrona |
+| Fonts don't block text rendering | ✅ Ya cumplido | System‑ui stack, sin Google Fonts |
+| LCP element in initial HTML | ✅ Ya cumplido | SSR, no JS‑rendered |
+| Speculation Rules | ⬜ Sugerencia | Mejora progresiva, no corrección requerida |
+
+### Clasificación de correcciones
+
+La skill clasificó los siguientes hallazgos:
+
+- **Correcciones requeridas (todas aplicadas):** Favicon 404, heading order, color contrast, refactorización de componentes duplicados (SectionHeading, CardGrid). Estas correcciones atacan causas raíz reales identificadas tanto por Lighthouse como por la guía de la skill.
+- **Sugerencias (no requeridas):** Unused JavaScript (29 KiB), Speculation Rules API. Son oportunidades de mejora continua que no afectan significativamente las puntuaciones principales.
+
+### Conclusión del uso de la skill
+
+La skill confirmó que todas las correcciones requeridas ya fueron aplicadas durante el ciclo de mejora. No se identificaron nuevas correcciones obligatorias adicionales. Las sugerencias de Speculation Rules y reducción de JavaScript no utilizado quedan como trabajo futuro para cuando se aborde la optimización de navegación entre páginas.

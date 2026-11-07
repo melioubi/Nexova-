@@ -168,6 +168,8 @@ Ambos componentes eliminan la repetición del mismo patrón HTML+Tailwind en mú
 | ✅ Mejora medible en al menos una puntuación por frontend | Website: Acc 95→96, Mobile Perf 87→98; Backoffice: BP 96→100, Mobile Perf 83→98 |
 | ✅ Correcciones atacan causas reales | Favicon (error 404), heading order (accesibilidad), color contrast, reconstrucción (TBT) |
 | ✅ Componente reutilizable extraído | `SectionHeading` + `CardGrid` |
+| ✅ Skill de agente instalada y ejecutada | `core-web-vitals` de addyosmani/web-quality-skills |
+| ✅ Skill utilizada para guiar correcciones | Checklist de LCP verificado, correcciones requeridas aplicadas |
 | ✅ Sin regresiones funcionales | Builds exitosos, servidores responden 200 |
 | ✅ Calidad de código mantenida | Refactorizaciones minimalistas, un solo cambio por commit |
 
