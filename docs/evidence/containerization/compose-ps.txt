@@ -1,0 +1,3 @@
+NAME                   IMAGE                COMMAND                  SERVICE      CREATED              STATUS                    PORTS
+nexova--backend-1      nexova--backend      "/bin/sh /usr/local/…"   backend      32 minutes ago       Up 10 minutes (healthy)   127.0.0.1:8000->8000/tcp
+nexova--interfaces-1   nexova--interfaces   "docker-entrypoint.s…"   interfaces   About a minute ago   Up 39 seconds (healthy)   127.0.0.1:3000-3001->3000-3001/tcp

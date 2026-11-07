@@ -8,6 +8,7 @@ const views = [
   ["/backoffice/inventory/orders/inbound", "Registrar entrada"],
   ["/backoffice/inventory/orders/outbound", "Registrar salida"],
   ["/backoffice/inventory/orders", "Historial de órdenes"],
+  ["/backoffice/suppliers", "Proveedores"],
 ];
 
 export function InventoryNav() {

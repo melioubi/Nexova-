@@ -22,10 +22,10 @@ export default function Home() {
         </header>
         <section className="welcome">
           <p className="eyebrow">Backoffice</p>
-          <h1>Tu sesión está activa.</h1>
-          <p>Accede a los datos de tu cuenta desde el panel interno.</p>
+          <h1>Panel de operaciones</h1>
           <Link className="button" href="/account/profile">Ver mi perfil</Link>
           <Link className="button button-secondary" href="/backoffice/inventory/products">Inventario de talento</Link>
+          <Link className="button button-secondary" href="/backoffice/suppliers">Proveedores</Link>
         </section>
       </main>
     </AuthGuard>

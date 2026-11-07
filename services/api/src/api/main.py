@@ -1,15 +1,17 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.auth.router import router as auth_router
 from api.db import init_db
+from api.dependencies import get_current_user
 from api.domains.router import build_domain_router
 from api.inventory.router import router as inventory_router
 from api.profiles.router import router as profiles_router
 from api.users.router import router as users_router
+from routes.suppliers import router as suppliers_router
 
 
 @asynccontextmanager
@@ -53,6 +55,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(profiles_router)
 app.include_router(inventory_router)
+app.include_router(suppliers_router, dependencies=[Depends(get_current_user)])
 app.include_router(build_domain_router("candidates", "/candidates", "candidates"))
 app.include_router(build_domain_router("clients", "/clients", "clients"))
 app.include_router(build_domain_router("vacancies", "/vacancies", "vacancies"))

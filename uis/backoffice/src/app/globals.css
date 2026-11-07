@@ -39,6 +39,14 @@ label { display: grid; gap: 7px; font-family: Arial, sans-serif; font-size: .88r
 .inventory-success { padding: 12px 0; color: var(--accent-dark); border-top: 1px solid var(--accent); }
 .user-uuid { max-width: 260px; overflow-wrap: anywhere; font-family: monospace; font-size: 12px; }
 .welcome .button + .button { margin: 12px; }
+.supplier-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; margin-bottom: 24px; }
+.supplier-toolbar select { padding: 10px; background: white; border: 1px solid #aeb9b4; border-radius: 4px; font: inherit; }
+.supplier-form { margin-bottom: 24px; }
+.supplier-rate { display: flex; align-items: center; gap: 8px; margin: 0; }
+.supplier-rate input { width: 105px; }
+.supplier-rate button { white-space: nowrap; font-size: 12px; padding: 8px; }
+.supplier-status { border: 0; cursor: pointer; font: inherit; }
+.renewal-soon { color: #875500; background: #fff0cb; }
 @media (max-width: 600px) {
 	.inventory-shell { padding: 20px 16px; }
 	.inventory-heading h1 { font-size: 25px; }
