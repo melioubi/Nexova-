@@ -24,7 +24,8 @@ Reglas extra del brief:
   respuesta como esquema de entrada.
 - **Campos sensibles**: nunca se exponen contraseñas hasheadas ni tokens internos.
 - **Flujos de auth no autenticados** (registro, login, olvido/reinicio): no devuelven
-  contraseñas. `GET /auth/me` sí puede devolver el email del propio llamante.
+  contraseñas **ni reenvían el email**. `GET /auth/me` sí puede devolver el email del
+  propio llamante.
 
 ## Inventario de endpoints (estado final)
 
@@ -36,7 +37,7 @@ Leyenda: ✅ serializado explícitamente · 🔧 mejorado en esta auditoría · 
 | GET | `/health` | Healthcheck | ⚠️ dict tipado sin `response_model` | 🔧 `HealthResponse` | — | `response_model` explícito |
 | POST | `/auth/login` | Login OAuth2 → token JWT | ✅ | `Token` | form OAuth2 | — |
 | GET | `/auth/me` | Perfil del propio usuario | ✅ | `MeResponse` | — | — |
-| POST | `/users` | Registro público | ✅ | `UserPublic` | `UserCreate` | ver nota en §3 |
+| POST | `/users` | Registro público | ⚠️ devolvía `UserPublic` (con email) | 🔧 `RegisterResponse` | `UserCreate` | sin email (criterio 4), ver §3 |
 | GET | `/users` | Listado de usuarios (admin) | ⚠️ reutilizaba `UserPublic` (detalle) | 🔧 `UserListItem` | — | esquema de listado aparte y más ligero |
 | GET | `/users/{id}` | Detalle de un usuario | ✅ | `UserPublic` | — | — |
 | PUT | `/users/{id}` | Actualizar usuario | ✅ | `UserPublic` | `UserUpdate` | — |
@@ -82,22 +83,32 @@ omite del listado, que es lo que un consumidor admin necesita en la tabla.
 
 ### 3. Registro (`POST /users`) — decisión documentada
 
-**Hallazgo:** el flujo de registro devuelve `UserPublic` (incluye el `email` del
-usuario). El brief sugiere valorar limitar el email en flujos de auth no autenticados.
+**Hallazgo (revisado en esta auditoría):** el flujo de registro devolvía
+`UserPublic`, que incluye el `email` del usuario recién creado. El criterio de
+evaluación 4 exige que los flujos de autenticación **no autenticados** (registro,
+login, olvido/reinicio) no expongan el correo electrónico — solo `GET /auth/me`
+(usuario autenticado) puede devolverlo.
 
-**Decisión (documentada a propósito):** se mantiene el `email` en la respuesta de
-registro porque:
+**Decisión final:** `POST /users` devuelve ahora `RegisterResponse`, un esquema
+nuevo que **omite el email** y solo expone `{id, is_active, role, created_at}`.
+Razones:
 
-1. Es un **eco de la entrada** del propio usuario (la envió en el body), no expone
-   datos de terceros ni credenciales.
-2. El contrato heredado y sus tests dependen de él
-   (`tests/test_users.py::test_register_user_success`, `test_register_normalizes_email`),
-   y el hito exige que los tests existentes sigan pasando sin regresiones.
-3. El frontend (`uis/backoffice`) no usa la respuesta de registro; hace login después.
+1. El criterio de evaluación 4 pide explícitamente que los flujos de auth no
+   autenticados no reenvíen el correo electrónico.
+2. El email no se necesita en la respuesta: quien registra confirma el alta con
+   `id`/`role`/`is_active`, y el propio email queda disponible en `GET /auth/me`
+   tras el login.
+3. El frontend (`uis/backoffice`) ignora la respuesta de `register()` y hace login
+   a continuación — no depende de este campo (verificado en
+   `uis/backoffice/src/app/register/page.tsx`).
+
+Los tests se actualizaron en consecuencia: `test_register_user_success` y
+`test_register_normalizes_email` ahora comprueban la ausencia de `email` en la
+respuesta y verifican la normalización vía login + `GET /auth/me`.
 
 En cambio, `POST /auth/login` devuelve **solo el token** (sin email ni usuario), y
-`GET /auth/me` expone el email únicamente del llamante autenticado — cubriendo el
-caso de perfil que el brief permite. Ningún endpoint expone `hashed_password`.
+`GET /auth/me` expone el email únicamente del llamante autenticado. Ningún endpoint
+expone `hashed_password`.
 
 ### 4. Autenticación y usuarios — verificación de campos sensibles
 
@@ -144,8 +155,9 @@ se serializan solo con los campos expuestos por `DomainRecord`.
 - **Tests de serialización añadidos:** `tests/test_serialization.py` verifica
   explícitamente que (a) ningún endpoint expone `hashed_password`, (b) `GET /users`
   devuelve el esquema de listado ligero (sin `created_at`), (c) `/` y `/health`
-  tienen contrato explícito, (d) `POST /users` y `/auth/me` mantienen los campos que
-  el frontend consume, y (e) la forma de respuesta coincide con el esquema declarado.
+  tienen contrato explícito, (d) `POST /users` devuelve `RegisterResponse` **sin
+  email** (criterio 4) y `/auth/me` conserva el email del llamante autenticado, y
+  (e) la forma de respuesta coincide con el esquema declarado.
 - **Cobertura OpenAPI:** se inspeccionó el schema OpenAPI generado; **todos** los
   endpoints con código de éxito 200/201 declaran `response_model`. Los únicos sin
   schema de salida son los `DELETE` que devuelven `204 No Content` (sin body), lo
@@ -154,7 +166,10 @@ se serializan solo con los campos expuestos por `DomainRecord`.
   `GET /health`, `POST /users`, `POST /auth/login`, `GET /auth/me`, `GET /users`,
   `GET /users/{id}`, `GET /suppliers` **y el área completa de `/inventory/*`**
   (con `DATABASE_URL=sqlite:///...` + seed), verificando status codes y forma exacta
-  de payload: `TalentAssetPublic` (flatten, sin claves ORM), `TalentEntryPublic`,
+  de payload: `RegisterResponse` con claves exactamente
+  `{id, is_active, role, created_at}` (sin email), `Token` solo, `MeResponse` con
+  el email del llamante, `UserListItem` ligero sin `created_at`,
+  `TalentAssetPublic` (flatten, sin claves ORM), `TalentEntryPublic`,
   `TalentExitPublic` y `OrderPublic` con las relaciones aplanadas
   (`talent_asset_name`, `skill_category`, `country`). Resultado: 100 % PASS.
 
@@ -163,11 +178,12 @@ se serializan solo con los campos expuestos por `DomainRecord`.
 | Estado | Cantidad |
 | --- | --- |
 | ✅ Ya serializado (solo verificado) | 29 |
-| 🔧 Mejorado en esta auditoría | 4 (`GET /`, `GET /health`, `GET /users`, + tests de serialización) |
+| 🔧 Mejorado en esta auditoría | 5 (`GET /`, `GET /health`, `GET /users`, `POST /users`, + tests de serialización) |
 | ❌ Sin serializar | 0 |
 
 **Conclusión:** el backend de Nexova no devolvía objetos ORM en crudo; el trabajo de
 auditoría consistió en (1) hacer explícito el `response_model` en los endpoints de
-info/health, (2) separar el esquema de listado de usuarios del de detalle, y (3)
-**dejar registro formal y verificación automatizada** de que toda la superficie de la
-API cumple el contrato.
+info/health, (2) separar el esquema de listado de usuarios del de detalle, (3)
+alinear el registro al criterio 4 con un nuevo `RegisterResponse` que **no reenvía el
+email** en flujos de auth no autenticados, y (4) **dejar registro formal y
+verificación automatizada** de que toda la superficie de la API cumple el contrato.

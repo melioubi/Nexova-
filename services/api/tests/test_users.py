@@ -17,13 +17,18 @@ def test_register_user_success(client):
     )
     assert response.status_code == 201
     data = response.json()
-    assert data["email"] == "newuser@example.com"
+    # registration is an unauthenticated auth flow: it must NOT echo the email
+    assert "email" not in data
+    # ...but it must identify the created user, confirm role and activation,
+    # and never leak credentials.
+    assert data["id"]
     assert data["role"] == "user"
     assert data["is_active"] is True
     assert "hashed_password" not in data
-    # name goes to profile, not UserPublic — verify via /auth/me
+    # The email is verifiable via the authenticated /auth/me endpoint instead.
     token = login_user(client, "newuser@example.com")
     me = client.get("/auth/me", headers=auth_header(token))
+    assert me.json()["email"] == "newuser@example.com"
     assert me.json()["profile"]["name"] == "New User"
 
 
@@ -84,13 +89,17 @@ def test_register_creates_profile(client):
 
 
 def test_register_normalizes_email(client):
-    """Edge case: email is stored in lowercase."""
+    """Edge case: email is stored in lowercase (verified via login + /auth/me)."""
     response = client.post(
         "/users",
         json={"email": "UPPERCASE@Example.com", "password": "strong-password"},
     )
     assert response.status_code == 201
-    assert response.json()["email"] == "uppercase@example.com"
+    assert "email" not in response.json()
+    # normalized email is visible to the authenticated user
+    token = login_user(client, "uppercase@example.com")
+    me = client.get("/auth/me", headers=auth_header(token))
+    assert me.json()["email"] == "uppercase@example.com"
 
 
 # ── GET /users ────────────────────────────────────────────────────────────────

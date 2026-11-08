@@ -18,7 +18,13 @@ def register_user(
     phone: str | None = None,
     address: str | None = None,
 ) -> dict:
-    """Register a user and return the JSON response body."""
+    """Register a user and return the JSON response body.
+
+    The registration response (``RegisterResponse``) deliberately omits the
+    email — it is an unauthenticated auth flow, and the brief requires these
+    not to re-echo the caller's email. Tests that need the email use the
+    ``email`` argument they passed in.
+    """
     body: dict[str, object] = {"email": email, "password": password}
     if name is not None:
         body["name"] = name

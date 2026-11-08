@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.dependencies import get_current_user
 from api.profiles.service import create_profile, delete_profile
-from api.schemas import ProfileCreate, UserCreate, UserListItem, UserPublic, UserUpdate
+from api.schemas import ProfileCreate, RegisterResponse, UserCreate, UserListItem, UserPublic, UserUpdate
 from api.users.service import (
     create_user,
     delete_user,
@@ -15,7 +15,7 @@ from api.users.service import (
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.post("", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 def register_user(user_data: UserCreate) -> dict:
     try:
         user = create_user(user_data)

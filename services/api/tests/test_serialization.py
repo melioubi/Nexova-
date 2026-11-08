@@ -2,10 +2,11 @@
 
 These verify the *contract* of the API responses:
 - every endpoint returns a well-formed payload matching its declared schema,
-- no endpoint leaks ``hashed_password`` / credentials,
+- no endpoint leaks ``hashed_password`` / credentials or internal tokens,
 - list endpoints use their own lightweight schema (no ``created_at`` on GET /users),
 - the info/health endpoints declare an explicit response contract,
-- registration / login / me keep the fields the frontend consumes.
+- unauthenticated auth flows (register) do NOT echo the caller's email;
+  ``GET /auth/me`` may return the authenticated user's own email.
 """
 
 from tests.conftest import auth_header, login_user, register_user
@@ -34,11 +35,16 @@ def test_health_has_explicit_contract(client):
     assert data["status"] == "ok"
 
 
-# ── Registration / auth — no credentials leaked, frontend contract kept ──────
+# ── Registration / auth — no credentials, no email echo in unauthenticated flows
 
 
-def test_register_response_has_no_credentials(client):
-    """POST /users never leaks hashed_password in the response body."""
+def test_register_response_has_no_credentials_and_no_email(client):
+    """POST /users (unauthenticated registration) leaks neither credentials nor email.
+
+    Per the brief: unauthenticated auth flows (register/login/recovery) must not
+    re-send the email in the response body. The caller already sent it; they
+    authenticate right after via /auth/login.
+    """
     response = client.post(
         "/users",
         json={"email": "no-leak@example.com", "password": "strong-password"},
@@ -47,8 +53,10 @@ def test_register_response_has_no_credentials(client):
     data = response.json()
     assert "hashed_password" not in data
     assert "password" not in data
-    # email is an echo of the caller's own input — kept for backward compatibility
-    assert data["email"] == "no-leak@example.com"
+    assert "email" not in data
+    # still identifies the created user without sensitive data
+    assert set(data.keys()) == {"id", "is_active", "role", "created_at"}
+    assert data["is_active"] is True
 
 
 def test_login_response_contains_only_token(client):

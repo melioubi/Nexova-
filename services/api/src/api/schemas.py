@@ -86,12 +86,21 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
-class MeResponse(UserPublic):
-    profile: ProfilePublic | None
+class RegisterResponse(BaseModel):
+    """Response for unauthenticated registration (``POST /users``).
 
+    Deliberately does **not** echo the caller's email nor any credentials.
+    Per the audit brief, unauthenticated auth flows (register/login/recovery)
+    must not return the email in the response body; the caller already sent it
+    and authenticates right after via ``/auth/login``. ``UserPublic`` remains
+    the detail schema used by the authenticated endpoints.
+    """
 
-class UserListItem(BaseModel):
     id: str
-    email: EmailStr
     is_active: bool
     role: Role
+    created_at: datetime
+
+
+class MeResponse(UserPublic):
+    profile: ProfilePublic | None
