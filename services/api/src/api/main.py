@@ -10,6 +10,7 @@ from api.dependencies import get_current_user
 from api.domains.router import build_domain_router
 from api.inventory.router import router as inventory_router
 from api.profiles.router import router as profiles_router
+from api.schemas import HealthResponse, RootResponse
 from api.users.router import router as users_router
 from routes.suppliers import router as suppliers_router
 
@@ -63,15 +64,15 @@ app.include_router(build_domain_router("interviews", "/interviews", "interviews"
 app.include_router(build_domain_router("evaluations", "/evaluations", "evaluations"))
 
 
-@app.get("/", tags=["health"])
-def root() -> dict[str, str]:
-    return {
-        "name": "Nexova API",
-        "status": "ok",
-        "docs": "/docs",
-    }
+@app.get("/", response_model=RootResponse, tags=["health"])
+def root() -> RootResponse:
+    return RootResponse(
+        name="Nexova API",
+        status="ok",
+        docs="/docs",
+    )
 
 
-@app.get("/health", tags=["health"])
-def health_check() -> dict[str, str]:
-    return {"status": "ok"}
+@app.get("/health", response_model=HealthResponse, tags=["health"])
+def health_check() -> HealthResponse:
+    return HealthResponse(status="ok")

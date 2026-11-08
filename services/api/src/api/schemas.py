@@ -4,6 +4,20 @@ from enum import Enum
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
+class RootResponse(BaseModel):
+    """Explicit response contract for ``GET /``."""
+
+    name: str
+    status: str
+    docs: str
+
+
+class HealthResponse(BaseModel):
+    """Explicit response contract for ``GET /health``."""
+
+    status: str
+
+
 class Role(str, Enum):
     admin = "admin"
     manager = "manager"
@@ -40,6 +54,8 @@ class UserUpdate(BaseModel):
 
 
 class UserPublic(BaseModel):
+    """Detail view of a user — includes audit fields like ``created_at``."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -49,6 +65,22 @@ class UserPublic(BaseModel):
     created_at: datetime
 
 
+class UserListItem(BaseModel):
+    """Lightweight list view of a user for admin tables.
+
+    Separate from ``UserPublic`` (detail): per the serialization guidance,
+    the list endpoint returns its own lighter schema instead of reusing the
+    detail one. Omits ``created_at`` and any contact data.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    email: EmailStr
+    is_active: bool
+    role: Role
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -56,3 +88,10 @@ class Token(BaseModel):
 
 class MeResponse(UserPublic):
     profile: ProfilePublic | None
+
+
+class UserListItem(BaseModel):
+    id: str
+    email: EmailStr
+    is_active: bool
+    role: Role

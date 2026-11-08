@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.dependencies import get_current_user
 from api.profiles.service import create_profile, delete_profile
-from api.schemas import ProfileCreate, UserCreate, UserPublic, UserUpdate
+from api.schemas import ProfileCreate, UserCreate, UserListItem, UserPublic, UserUpdate
 from api.users.service import (
     create_user,
     delete_user,
@@ -41,7 +41,7 @@ def register_user(user_data: UserCreate) -> dict:
     return user
 
 
-@router.get("", response_model=list[UserPublic])
+@router.get("", response_model=list[UserListItem])
 def read_users(current_user: dict = Depends(get_current_user)) -> list[dict]:
     return list_users()
 
