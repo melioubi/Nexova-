@@ -1,0 +1,16 @@
+services:
+  backend:
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0"]
+    volumes: !override
+      - backend-data:/data
+    restart: unless-stopped
+  interfaces:
+    build:
+      target: production
+      args:
+        BACKEND_API_URL: ${BACKEND_API_URL:?}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?}
+        NEXT_PUBLIC_INVENTORY_API_URL: ${NEXT_PUBLIC_INVENTORY_API_URL:?}
+        NEXT_PUBLIC_BACKOFFICE_URL: ${NEXT_PUBLIC_BACKOFFICE_URL:?}
+    volumes: !reset []
+    restart: unless-stopped

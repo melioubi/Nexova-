@@ -1,0 +1,9 @@
+**/node_modules
+**/.next
+**/.env*
+**/*.log
+**/.git
+**/out
+**/coverage
+application
+talent-pipeline-tracker
