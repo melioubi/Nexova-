@@ -118,18 +118,24 @@ GET /inventory/orders → 200 | 1.7ms [cache HIT]
 
 Todas las cifras salen de builds de **producción** (`next build && next start`) medidos con `measure-caching.cjs` sobre los datos del seed de carga. Los tamaños de JS están **sin comprimir**.
 
-### 2.1 Lazy loading 1 — Historial de órdenes: renderizado diferido por bloques
+### 2.1 Lazy loading 1 — Historial de órdenes: filas con `React.lazy` + renderizado diferido por bloques
 
-`uis/backoffice/src/app/(protected)/backoffice/inventory/orders/page.tsx`
+`uis/backoffice/src/app/(protected)/backoffice/inventory/orders/page.tsx` + `uis/backoffice/src/components/order-rows.tsx`
 
 **Por qué:** con 48 k órdenes la página montaba **48 159 `<tr>`** de una vez y se quedaba en blanco entre 11,5 y 15,9 s. Con la caché del backend la API ya respondía en 1,5 ms, así que **todo** ese tiempo era de cliente (parseo + render + layout). Nadie lee 48 k filas: se consultan las más recientes.
 
-**Qué se hizo:** se pintan 100 filas al principio, y un centinela con `IntersectionObserver` (margen de 800 px) añade el siguiente bloque antes de que el usuario llegue al final. Además, la fecha se formatea con un `Intl.DateTimeFormat` compartido y el ordenamiento precalcula el timestamp de cada orden (antes se hacía `Date.parse` dos veces por comparación: ~1,5 M de parseos).
+**Qué se hizo:**
+- **Componente diferido con `React.lazy`:** las filas viven en `OrderRows`, cargado con `lazy(() => import("@/components/order-rows"))` dentro de `<Suspense>`. Sólo hace falta cuando ya llegaron los datos, así que queda fuera del bundle inicial de la página. El `import()` se lanza al montar la página, **en paralelo** con la petición al API, para que el chunk no se descargue *después* de los datos y no añada espera. Se eligió `React.lazy` en vez de `next/dynamic` porque ya viene con React y no suma el runtime de `next/dynamic`, que en el formulario de proveedores salió más caro que el propio componente (§4).
+- **Datos diferidos dentro del componente:** se pintan 100 filas al principio, y un centinela con `IntersectionObserver` (margen de 800 px) añade el siguiente bloque antes de que el usuario llegue al final.
+- Además, la fecha se formatea con un `Intl.DateTimeFormat` compartido y el ordenamiento precalcula el timestamp de cada orden (antes se hacía `Date.parse` dos veces por comparación: ~1,5 M de parseos).
 
 | Métrica (3 ejecuciones) | Antes | Después |
 |---|---|---|
-| Tiempo hasta ver filas | 11 529 – 15 894 ms | **913 – 1 413 ms** |
+| Tiempo hasta ver filas | 11 529 – 15 894 ms | **906 – 1 413 ms** |
 | `<tr>` en el DOM | 48 159 | **101** (201 tras un scroll) |
+| JS hasta el evento `load` (cascarón de la página) | 461,0 KB | **460,1 KB** (el chunk de filas llega en paralelo a los datos) |
+
+El grueso del beneficio es el renderizado diferido de los datos. La separación con `React.lazy` aporta poco en bytes (−0,9 KB en el camino crítico), pero deja el componente de la tabla fuera de la carga inicial sin coste de runtime y sin añadir latencia, porque se precarga mientras llegan los datos.
 
 ### 2.2 Lazy loading 2 — Formulario de contacto del website con `next/dynamic`
 
@@ -207,7 +213,7 @@ Es un historial de auditoría: lo que se escribe por la API se ve al instante gr
 | `GET /auth/me`, `/profiles/me`, `/users/{id}` | `/auth/me` es el endpoint **más llamado** (`AuthGuard` en cada vista) | Son datos personales: exigirían una clave por usuario y una invalidación cuidadosa ante cambios de perfil o rol. Cuestan ~1 ms: el riesgo no compensa |
 | `/candidates`, `/vacancies`, `/interviews`, … | Mismo patrón para 5 dominios | Filtran por `user_uuid` (datos de candidatos, sensibles en RR. HH.) y cuestan ~1 ms |
 | `functools.lru_cache` en servicios | Lo sugiere el enunciado | No tiene TTL ni invalidación selectiva, y cachearía objetos ORM ligados a una sesión cerrada. No cumple la disciplina de TTL exigida |
-| **Lazy loading del formulario de alta de proveedor** | Sólo se usa al pulsar "Registrar proveedor" | **Se implementó, se midió y se revirtió.** El JS inicial de `/backoffice/suppliers` **subió** de 503,3 KB a 507,4 KB: el runtime de `next/dynamic` pesa más que el propio formulario (1,3 KB). Diferir algo que pesa menos que el mecanismo para diferirlo empeora el resultado |
+| **Lazy loading del formulario de alta de proveedor** | Sólo se usa al pulsar "Registrar proveedor" | **Se implementó, se midió y se revirtió.** El JS inicial de `/backoffice/suppliers` **subió** de 503,3 KB a 507,4 KB: el runtime de `next/dynamic` pesa más que el propio formulario (1,3 KB). Diferir algo que pesa menos que el mecanismo para diferirlo empeora el resultado. Esta medición motivó usar `React.lazy` en el historial (§2.1) |
 | `useMemo` en `renewalSoon` / etiquetas de categoría (proveedores) | Se calculan por fila | Son operaciones O(1) sobre 9 categorías y la página sólo re-renderiza al recibir datos (el formulario no es controlado). Sería memoización prematura |
 | `useMemo` en `stockLevel` (activos) | Por fila | Son tres comparaciones de enteros: trivial |
 
@@ -250,7 +256,7 @@ cd ../backoffice && node scripts/measure-caching.cjs
 
 ## 7. Verificación frente a la rúbrica
 
-- [x] **≥ 2 lazy loading con justificación:** historial de órdenes (renderizado diferido, §2.1) y formulario de contacto (`next/dynamic`, §2.2). Un tercer candidato se midió y se descartó con datos (§4).
+- [x] **≥ 2 lazy loading con justificación:** historial de órdenes (`React.lazy` + renderizado diferido, §2.1) y formulario de contacto (`next/dynamic`, §2.2). Un tercer candidato (formulario de proveedores) se midió y se descartó con datos (§4).
 - [x] **`useMemo` sobre un cálculo no trivial** con dependencias correctas (`[assets]`, §2.3).
 - [x] **≥ 2 endpoints cacheados con TTL:** `/inventory/orders` (300 s) y `/inventory/products` (30 s).
 - [x] **Invalidación** en todas las escrituras que afectan a los datos cacheados, con protección contra *write-back* obsoleto (§1.1–1.3, tests).

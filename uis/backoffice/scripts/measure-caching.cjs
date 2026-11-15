@@ -67,7 +67,9 @@ async function measureWebsite(browser) {
 async function measureOrdersHistory(browser, authToken) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await page.addInitScript((t) => localStorage.setItem("nexova.auth.token", t), authToken);
-  await page.goto(`${backoffice}/backoffice/inventory/orders`);
+  const js = trackJs(page);
+  await page.goto(`${backoffice}/backoffice/inventory/orders`, { waitUntil: "load" });
+  const shellJs = js.bytes;
   await page.locator(".order-badge").first().waitFor({ timeout: 120000 });
   const result = await page.evaluate(() => ({
     firstRowsMs: performance.now(),
@@ -76,6 +78,7 @@ async function measureOrdersHistory(browser, authToken) {
   await page.mouse.wheel(0, 20000);
   await page.waitForTimeout(500);
   const afterScroll = await page.locator(".inventory-table tbody tr").count();
+  console.log(`backoffice orders    JS for the page shell ${kb(shellJs)} | total ${kb(js.bytes)}`);
   console.log(`backoffice orders    rows visible after ${result.firstRowsMs.toFixed(0)} ms since navigation | <tr> in DOM: ${result.rows} → ${afterScroll} after one scroll`);
   await page.close();
 }
