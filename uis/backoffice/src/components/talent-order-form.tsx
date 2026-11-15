@@ -1,8 +1,10 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { createTalentOrder, getTalentAsset, listTalentAssets, OrderType, TalentAsset } from "@/lib/inventory";
+
+const collator = new Intl.Collator("es", { sensitivity: "base", numeric: true });
 
 export function TalentOrderForm({ type }: { type: OrderType }) {
   const outbound = type === "outbound";
@@ -40,6 +42,24 @@ export function TalentOrderForm({ type }: { type: OrderType }) {
     });
     return () => controller.abort();
   }, [selectedId, revision]);
+
+  // The form re-renders on every keystroke (quantity / notes are controlled
+  // inputs). Without memoization each keystroke re-sorted ~270 assets with
+  // locale-aware comparison and rebuilt every <option>. `assets` only changes
+  // when the list is (re)fetched, so it is the single dependency.
+  const assetOptions = useMemo(() => {
+    const byCountry = new Map<string, TalentAsset[]>();
+    for (const asset of assets) {
+      const group = byCountry.get(asset.country) ?? [];
+      group.push(asset);
+      byCountry.set(asset.country, group);
+    }
+    return [...byCountry.entries()]
+      .sort(([a], [b]) => collator.compare(a, b))
+      .map(([country, group]) => <optgroup key={country} label={country}>
+        {group.sort((a, b) => collator.compare(a.name, b.name)).map((asset) => <option key={asset.id} value={asset.id}>{asset.name} · {asset.skill_category}</option>)}
+      </optgroup>);
+  }, [assets]);
 
   const stockReady = selectedAsset?.id === selectedId;
   const available = stockReady ? selectedAsset!.current_stock : 0;
@@ -88,7 +108,7 @@ export function TalentOrderForm({ type }: { type: OrderType }) {
   return <section>
     <header className="inventory-heading"><p className="eyebrow">{outbound ? "TalentExit · Orden de salida" : "TalentEntry · Orden de entrada"}</p><h1>{outbound ? "Registrar salida de talento" : "Registrar entrada de talento"}</h1></header>
     <form className="inventory-form" onSubmit={handleSubmit}>
-      <label>Activo de talento<select required value={selectedId} disabled={loading || saving} onChange={(event) => changeAsset(event.target.value)}><option value="">{loading ? "Cargando activos..." : "Seleccionar activo"}</option>{assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.name} · {asset.country}</option>)}</select></label>
+      <label>Activo de talento<select required value={selectedId} disabled={loading || saving} onChange={(event) => changeAsset(event.target.value)}><option value="">{loading ? "Cargando activos..." : "Seleccionar activo"}</option>{assetOptions}</select></label>
       {selectedId && <div className="stock-readout" role="status" aria-live="polite"><span>Stock disponible actual</span><strong>{stockReady ? `${available} perfiles` : "Consultando stock..."}</strong>{stockReady && <small>{selectedAsset!.skill_category} · {selectedAsset!.country}</small>}</div>}
       <label>Cantidad<input type="number" min={1} step={1} required disabled={saving || !selectedId || (outbound && !stockReady)} value={quantity} aria-invalid={Boolean(quantityError || exceedsStock)} aria-describedby="quantity-feedback" onChange={(event) => { setQuantity(event.target.value); setQuantityError(""); }} /></label>
       <div id="quantity-feedback" aria-live="polite">{quantityError && <p className="error" role="alert">{quantityError}</p>}{exceedsStock && <p className="error">La cantidad supera los {available} perfiles disponibles. Reduce la cantidad antes de registrar la salida.</p>}</div>
