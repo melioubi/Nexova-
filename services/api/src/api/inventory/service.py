@@ -2,6 +2,7 @@
 
 from sqlmodel import Session, func, select
 
+from api.inventory.cache import invalidate_products, invalidate_stock_and_orders
 from api.inventory.models import TalentAsset, TalentEntry, TalentExit
 from api.inventory.schemas import (
     OrderPublic,
@@ -69,6 +70,7 @@ def create_asset(session: Session, data: TalentAssetCreate) -> TalentAssetPublic
     session.add(asset)
     session.commit()
     session.refresh(asset)
+    invalidate_products()
     return _asset_to_public(asset, 0)
 
 
@@ -81,6 +83,7 @@ def create_entry(session: Session, data: TalentEntryCreate, user_uuid: str) -> T
     session.add(entry)
     session.commit()
     session.refresh(entry)
+    invalidate_stock_and_orders()
     return TalentEntryPublic.model_validate(entry, from_attributes=True)
 
 
@@ -94,6 +97,8 @@ def create_exit(session: Session, data: TalentExitCreate, user_uuid: str) -> Tal
     if asset is None:
         raise ValueError("Talent asset not found")
 
+    # Always computed from the database, never from the cached product list:
+    # this check is what prevents negative stock, so it cannot be stale.
     current_stock = _compute_stock(session, asset.id, asset.country)
     if data.quantity > current_stock:
         raise ValueError(
@@ -105,6 +110,7 @@ def create_exit(session: Session, data: TalentExitCreate, user_uuid: str) -> Tal
     session.add(exit_)
     session.commit()
     session.refresh(exit_)
+    invalidate_stock_and_orders()
     return TalentExitPublic.model_validate(exit_, from_attributes=True)
 
 

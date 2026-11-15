@@ -7,17 +7,28 @@ pipeline data is commercially sensitive (per CONTEXT.md).
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from pydantic import TypeAdapter
 from sqlmodel import Session
 
 from api.db import get_db
 from api.dependencies import get_current_user
 from api.inventory import schemas, service
+from api.inventory.cache import (
+    ORDERS_NS,
+    ORDERS_TTL_SECONDS,
+    PRODUCTS_NS,
+    PRODUCTS_TTL_SECONDS,
+    cached_json,
+)
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
 CurrentUser = Annotated[dict, Depends(get_current_user)]
 DbSession = Annotated[Session, Depends(get_db)]
+
+_assets_adapter = TypeAdapter(list[schemas.TalentAssetPublic])
+_orders_adapter = TypeAdapter(list[schemas.OrderPublic])
 
 
 # ---------------------------------------------------------------------------
@@ -28,9 +39,15 @@ DbSession = Annotated[Session, Depends(get_db)]
 def list_products(
     session: DbSession,
     current_user: CurrentUser,
-) -> list[schemas.TalentAssetPublic]:
-    """List all talent assets with computed ``current_stock``."""
-    return service.list_assets(session)
+) -> Response:
+    """List all talent assets with computed ``current_stock``.
+
+    Cached (shared key, TTL 30 s, invalidated by every product/order write).
+    The response is the same for every authenticated user.
+    """
+    return cached_json(
+        PRODUCTS_NS, PRODUCTS_TTL_SECONDS, lambda: service.list_assets(session), _assets_adapter
+    )
 
 
 @router.post(
@@ -53,7 +70,12 @@ def get_product(
     session: DbSession,
     current_user: CurrentUser,
 ) -> schemas.TalentAssetPublic:
-    """Get a single talent asset with its current stock."""
+    """Get a single talent asset with its current stock.
+
+    Deliberately NOT cached: the order forms read it right before registering
+    an outbound order, so it must show the real stock (and it is cheap: two
+    indexed SUM queries).
+    """
     result = service.get_asset(session, asset_id)
     if result is None:
         raise HTTPException(
@@ -108,6 +130,11 @@ def create_outbound_order(
 def list_orders(
     session: DbSession,
     current_user: CurrentUser,
-) -> list[schemas.OrderPublic]:
-    """List all orders (inbound + outbound) with product info."""
-    return service.list_orders(session)
+) -> Response:
+    """List all orders (inbound + outbound) with product info.
+
+    Cached (shared key, TTL 300 s, invalidated by every inbound/outbound order).
+    """
+    return cached_json(
+        ORDERS_NS, ORDERS_TTL_SECONDS, lambda: service.list_orders(session), _orders_adapter
+    )

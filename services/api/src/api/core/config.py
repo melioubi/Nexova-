@@ -20,6 +20,10 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="DATABASE_URL",
     )
+    cache_enabled: bool = Field(
+        default=True,
+        validation_alias="CACHE_ENABLED",
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",
