@@ -21,7 +21,7 @@ export default function CardGrid({
   className = "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8",
 }: CardGridProps) {
   return (
-    <div className={className}>
+    <div className={`grid ${className}`}>
       {items.map((item) => (
         <div
           key={item.key}
