@@ -18,11 +18,12 @@
   --color-accent-600: #b45309;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+/*
+ * No global "* { margin: 0; padding: 0 }" reset here: Tailwind v4's Preflight
+ * (included by @import "tailwindcss") already does it inside @layer base.
+ * An unlayered reset beats every layered utility, so it silently zeroed all
+ * spacing classes (py-24, p-8, px-4, mt-4…).
+ */
 
 body {
   color: #1e293b;

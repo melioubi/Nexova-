@@ -51,8 +51,9 @@ export default function MethodologySection() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {steps.map((step, index) => (
             <div key={step.number} className="relative">
-              {/* Connector line (desktop) */}
-              {index < steps.length - 1 && (
+              {/* Connector line (desktop, 3 columns): not after the last step of
+                  each row, otherwise it overflows the viewport to the right. */}
+              {index < steps.length - 1 && (index + 1) % 3 !== 0 && (
                 <div className="hidden lg:block absolute top-12 left-full w-full h-0.5 bg-gray-200 -z-10" />
               )}
 
