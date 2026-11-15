@@ -1,3 +1,5 @@
+import logging
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -5,6 +7,8 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.auth.router import router as auth_router
+from api.core.cache import cache
+from api.core.config import get_settings
 from api.db import init_db
 from api.dependencies import get_current_user
 from api.domains.router import build_domain_router
@@ -15,9 +19,21 @@ from api.users.router import router as users_router
 from routes.suppliers import router as suppliers_router
 
 
+timing_logger = logging.getLogger("api.timing")
+if not timing_logger.handlers:
+    # Uvicorn only configures its own loggers; give ours a handler so the
+    # timing lines actually reach stdout.
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(message)s"))
+    timing_logger.addHandler(_handler)
+    timing_logger.setLevel(logging.INFO)
+    timing_logger.propagate = False
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Initialize database tables on startup (development only)."""
+    cache.enabled = get_settings().cache_enabled
     init_db()
     yield
 
@@ -38,6 +54,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def timing_middleware(request: Request, call_next):
+    """Log one line per request with its latency — the evidence used to pick
+    caching candidates (see CACHING_REPORT.md). Also exposed as a response
+    header so the frontend / curl can read it without access to server logs."""
+    start = time.perf_counter()
+    response = await call_next(request)
+    duration = (time.perf_counter() - start) * 1000  # ms
+    response.headers["X-Response-Time-ms"] = f"{duration:.1f}"
+    timing_logger.info(
+        "%s %s → %s | %.1fms%s",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration,
+        f" [cache {response.headers['X-Cache']}]" if "X-Cache" in response.headers else "",
+    )
+    return response
 
 
 @app.exception_handler(Exception)
