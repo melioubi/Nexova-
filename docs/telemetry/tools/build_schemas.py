@@ -2,6 +2,7 @@
 
 Generates, from the definitions below:
   * docs/telemetry/event-schemas.json  (JSON Schema draft-07, validable)
+  * services/api/src/api/telemetry/event-schemas.json (copia idéntica que usa el backend)
   * the per-event specification section of docs/telemetry/telemetry-plan.md
     (between the BEGIN/END GENERATED markers)
 
@@ -25,6 +26,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "event-schemas.json"
+# Copia que usa el backend en runtime (la imagen Docker sólo incluye services/api).
+SERVICE_SCHEMA_PATH = ROOT.parents[1] / "services" / "api" / "src" / "api" / "telemetry" / "event-schemas.json"
 PLAN_PATH = ROOT / "telemetry-plan.md"
 BEGIN = "<!-- BEGIN GENERATED: event-specs (docs/telemetry/tools/build_schemas.py) -->"
 END = "<!-- END GENERATED: event-specs -->"
@@ -988,14 +991,17 @@ def main():
 
     if args.check:
         stale = []
-        if SCHEMA_PATH.read_text(encoding="utf-8") != schema_text:
-            stale.append(str(SCHEMA_PATH))
+        for path in (SCHEMA_PATH, SERVICE_SCHEMA_PATH):
+            if not path.exists() or path.read_text(encoding="utf-8") != schema_text:
+                stale.append(str(path))
         if plan != new_plan:
             stale.append(str(PLAN_PATH))
         if stale:
             sys.exit("Desactualizado: " + ", ".join(stale))
     else:
         SCHEMA_PATH.write_text(schema_text, encoding="utf-8")
+        SERVICE_SCHEMA_PATH.parent.mkdir(parents=True, exist_ok=True)
+        SERVICE_SCHEMA_PATH.write_text(schema_text, encoding="utf-8")
         PLAN_PATH.write_text(new_plan, encoding="utf-8")
     by_cat = {}
     for e in E:
