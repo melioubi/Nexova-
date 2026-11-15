@@ -1,0 +1,9 @@
+.env
+.env.local
+uis/application/
+.env.*.local
+.venv/
+__pycache__/
+*.py[cod]
+.coverage
+services/api/data/

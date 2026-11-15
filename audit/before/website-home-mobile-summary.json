@@ -1,0 +1,11 @@
+{
+  "performance": 87,
+  "accessibility": 95,
+  "best-practices": 100,
+  "seo": 100,
+  "lcp": "0.8 s",
+  "cls": "0",
+  "tbt": "520 ms",
+  "ttfb": "Root document took 10 ms",
+  "inp": "n/a"
+}
