@@ -23,6 +23,7 @@
 6. [Riesgos y exclusiones](#6-riesgos-y-exclusiones)
 7. [Guía de implementación y verificación](#7-guía-de-implementación-y-verificación)
 8. [Verificación frente a la rúbrica](#8-verificación-frente-a-la-rúbrica)
+9. [Almacenamiento: `telemetry_events` en Supabase](#9-almacenamiento-telemetry_events-en-supabase)
 - [Anexo A — Especificación por evento (generada)](#anexo-a--especificación-por-evento)
 
 ---
@@ -45,7 +46,7 @@ Las rutas de código citadas corresponden al estado de la rama `feature/caching-
 ### 1.2 Qué **no** es este plan
 
 - No es código: no se instrumenta nada todavía.
-- No elige proveedor de almacenamiento (eso corresponde al proyecto de *Almacenamiento*), pero sí fija el contrato (envelope y esquemas) y los niveles de servicio (stream ≤ 1 min, batch horario o diario) que ese almacenamiento debe cumplir.
+- El almacenamiento (tabla `telemetry_events` en Supabase y endpoint de ingesta) se implementó en el proyecto *Almacenamiento*: ver §9.
 
 ### 1.3 Restricciones del BRIEFING que gobiernan todo el diseño
 
@@ -489,6 +490,78 @@ El script valida el JSON Schema contra el metaesquema draft-07 y comprueba cada 
 - [x] **PII identificada y sanitizada** (§4.5 y en cada evento).
 - [x] **Riesgos y exclusiones con razones** (§6).
 - [x] **Instrumentable sin aclaraciones:** dónde emitir (archivo y función), cuándo exactamente, prerrequisitos y escenarios de verificación (§2.2, §3, §7).
+
+---
+
+## 9. Almacenamiento: `telemetry_events` en Supabase
+
+> Implementado en el proyecto *Almacenamiento*: migración `services/api/migrations/001_telemetry_events.sql` y endpoint `POST /telemetry/events` (`services/api/src/api/telemetry/`).
+
+### 9.1 Tabla
+
+| Columna | Tipo | Regla |
+|---|---|---|
+| `id` | `uuid` PK, default `gen_random_uuid()` | Identificador del registro (no confundir con `eventId`, que va en `tags._envelope`) |
+| `timestamp` | `timestamptz` NOT NULL | `envelope.timestamp` (UTC, momento de la ocurrencia) |
+| `service` | `text` NOT NULL | Derivado de `envelope.context.source`: `frontend_backoffice`→`backoffice`, `frontend_website`→`website`, `backend_api`→`api`, `backend_job`→`job` |
+| `event_type` | `text` NOT NULL | `envelope.event_type`. CHECK con el regex `entidad_acción` |
+| `level` | `text` default `'info'` | `error`: `api_error_returned`, `frontend_error_captured` · `warn`: rechazos, umbrales, anomalías y degradaciones (`direct_stock_edit_rejected`, `kit_cost_variance_detected`, `stock_threshold_triggered`, `outbound_order_rejected`, `order_validation_failed`, `login_failed`, `access_denied`, `api_request_failed`, `db_query_slow_detected`, `telemetry_events_dropped`, `session_expired`) · `info`: el resto. CHECK `info`/`warn`/`error` |
+| `value` | `numeric` nullable | La propiedad numérica principal del evento (tabla 9.2); `NULL` si no aplica |
+| `message` | `text` nullable | Resumen legible generado **sólo** con dimensiones del allowlist (`office`, `programme_id`, `currency`, `endpoint`…). Nunca texto libre ni PII |
+| `tags` | `jsonb` default `'{}'` | `envelope.properties` **tal cual** (ya validadas contra el allowlist) + la clave reservada `_envelope` (9.3) |
+
+**Índices:** `timestamp` (btree desc), `event_type` (btree) y `tags` (GIN, `jsonb_ops`: soporta `@>`, `?`, `?|`, `?&`).
+
+**Inmutabilidad:** un trigger rechaza `UPDATE`, `DELETE` y `TRUNCATE` para todos los roles. `anon` y `authenticated` no tienen permisos, y RLS está activado sin políticas. El backend sólo hace `INSERT`.
+
+### 9.2 Columna `value` por evento
+
+| `event_type` | `value` = `properties.` |
+|---|---|
+| `inbound_order_created`, `outbound_order_created`, `outbound_order_rejected`, `direct_stock_edit_rejected`, `stock_threshold_triggered`, `inventory_snapshot_recorded` | `quantity` |
+| `kit_cost_variance_detected` | `variance_pct` |
+| `stock_threshold_cleared` | `episode_duration_minutes` |
+| `supplier_rate_updated` | `change_pct` |
+| `api_latency_recorded` | `p95_ms` |
+| `page_load_recorded` | `lcp_ms` |
+| `db_query_slow_detected`, `api_request_failed` | `duration_ms` |
+| `api_error_returned` | `occurrence_count` |
+| `telemetry_events_dropped` | `dropped_count` |
+| `order_form_abandoned` | `time_on_form_ms` |
+| `session_expired` | `session_age_minutes` |
+| `user_logged_out` | `session_duration_minutes` |
+| `list_filter_applied` | `result_count` |
+| `contact_section_viewed` | `scroll_depth_pct` |
+| resto | `NULL` |
+
+### 9.3 Campos del envelope dentro de `tags`
+
+El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación por persona en `direct_stock_edit_rejected`), `requestId` (correlación con los logs `api.timing`) y `eventId` (deduplicación de reintentos). Se guardan en `tags._envelope`:
+
+```json
+{
+  "office": "valencia", "product_id": "…", "product_category": "certification",
+  "programme_id": "ventas-b2b", "quantity": 40, "currency": "EUR", "…": "resto del allowlist",
+  "_envelope": {
+    "eventId": "…", "sessionId": "…", "userId": "…", "requestId": "…",
+    "schemaVersion": "1.0.0", "source": "backend_api", "environment": "production", "appVersion": "e272808"
+  }
+}
+```
+
+`_envelope` no puede chocar con ninguna propiedad del allowlist, porque todas son snake_case sin guion bajo inicial. Para leer sólo las propiedades de negocio se usa `tags - '_envelope'`.
+
+### 9.4 Ingesta (`POST /telemetry/events`)
+
+- **Body laxo:** `{"events": [ ... ]}`. Cada elemento se valida por separado con `TelemetryEvent.model_validate` (envelope y esquema del evento en `event-schemas.json`). Un inválido suma a `rejected` y no cancela el lote.
+- **Bulk insert:** todos los válidos van en **una transacción y una sentencia** `INSERT … VALUES (…), (…)`.
+- **Respuestas:**
+  - `200` con `{"received", "stored", "rejected"}` mientras el envelope tenga un array `events`;
+  - `422` si no lo tiene;
+  - `413` con más de 500 eventos;
+  - `503` si la base falla (no se guarda nada del lote, así que el cliente puede reintentarlo entero).
+- **Log de rechazos:** `api.telemetry` registra el índice, el `event_type` y la ruta y regla incumplida, **nunca** el valor.
+- **Eventos del backend:** usan el mismo camino (`api/telemetry/emitter.py`). El primero instrumentado es `login_failed` (A.15).
 
 ---
 

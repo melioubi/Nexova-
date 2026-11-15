@@ -20,6 +20,10 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="DATABASE_URL",
     )
+    telemetry_hash_pepper: Optional[str] = Field(
+        default=None,
+        validation_alias="TELEMETRY_HASH_PEPPER",
+    )
     cache_enabled: bool = Field(
         default=True,
         validation_alias="CACHE_ENABLED",

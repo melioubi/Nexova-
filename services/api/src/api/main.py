@@ -1,5 +1,6 @@
 import logging
 import time
+import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -15,6 +16,7 @@ from api.domains.router import build_domain_router
 from api.inventory.router import router as inventory_router
 from api.profiles.router import router as profiles_router
 from api.schemas import HealthResponse, RootResponse
+from api.telemetry.router import router as telemetry_router
 from api.users.router import router as users_router
 from routes.suppliers import router as suppliers_router
 
@@ -56,21 +58,39 @@ app.add_middleware(
 )
 
 
+def _valid_uuid(value: str | None) -> str | None:
+    """Accept only RFC 4122 UUIDs (versions 1–8), the format the telemetry
+    envelope requires; anything else is ignored."""
+    try:
+        parsed = uuid.UUID(value) if value else None
+    except ValueError:
+        return None
+    if parsed is None or parsed.variant != uuid.RFC_4122 or not 1 <= (parsed.version or 0) <= 8:
+        return None
+    return str(parsed)
+
+
 @app.middleware("http")
 async def timing_middleware(request: Request, call_next):
     """Log one line per request with its latency — the evidence used to pick
     caching candidates (see CACHING_REPORT.md). Also exposed as a response
     header so the frontend / curl can read it without access to server logs."""
     start = time.perf_counter()
+    # Correlation ids (telemetry-plan.md §3.2): reuse the client's if they are
+    # valid UUIDs, otherwise generate the request id here.
+    request.state.request_id = _valid_uuid(request.headers.get("X-Request-Id")) or str(uuid.uuid4())
+    request.state.session_id = _valid_uuid(request.headers.get("X-Session-Id"))
     response = await call_next(request)
+    response.headers["X-Request-Id"] = request.state.request_id
     duration = (time.perf_counter() - start) * 1000  # ms
     response.headers["X-Response-Time-ms"] = f"{duration:.1f}"
     timing_logger.info(
-        "%s %s → %s | %.1fms%s",
+        "%s %s → %s | %.1fms | req=%s%s",
         request.method,
         request.url.path,
         response.status_code,
         duration,
+        request.state.request_id,
         f" [cache {response.headers['X-Cache']}]" if "X-Cache" in response.headers else "",
     )
     return response
@@ -92,6 +112,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(profiles_router)
 app.include_router(inventory_router)
+app.include_router(telemetry_router)
 app.include_router(suppliers_router, dependencies=[Depends(get_current_user)])
 app.include_router(build_domain_router("candidates", "/candidates", "candidates"))
 app.include_router(build_domain_router("clients", "/clients", "clients"))

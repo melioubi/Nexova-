@@ -76,6 +76,10 @@ def init_db() -> None:
 
     SQLModel.metadata.create_all(_get_engine())
 
+    from api.telemetry.storage import create_table_for_local_dev
+
+    create_table_for_local_dev(_get_engine())
+
 
 def get_db() -> Generator[Session, None, None]:
     """FastAPI dependency — yields a SQLModel session per request."""
