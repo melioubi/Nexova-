@@ -34,7 +34,9 @@ export async function request<T>(path: string, init: RequestInit = {}, protected
     ...init,
     headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...init.headers },
   });
-  if (response.status === 401) {
+  // A 401 only means "session expired" when a token was sent. On public
+  // requests (e.g. login) it means wrong credentials and is handled below.
+  if (response.status === 401 && protectedRequest) {
     expireSession();
     throw new ApiError("Tu sesión ha expirado.", {}, 401);
   }
@@ -51,11 +53,18 @@ export type RegisterInput = Credentials & { name?: string; phone?: string; addre
 export type Profile = { email: string; name: string; phone: string; address: string };
 
 export async function login({ email, password }: Credentials) {
-  const response = await request<{ access_token: string }>("/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ username: email, password }),
-  });
+  let response: { access_token: string };
+  try {
+    response = await request<{ access_token: string }>("/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ username: email, password }),
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) throw new ApiError("Email o contraseña incorrectos.", {}, 401);
+    if (error instanceof ApiError && error.status === 403) throw new ApiError("Tu cuenta está desactivada. Contacta con RR. HH.", {}, 403);
+    throw error;
+  }
   if (!response.access_token) throw new ApiError("La respuesta de acceso no incluyó un token.");
   return response.access_token;
 }
