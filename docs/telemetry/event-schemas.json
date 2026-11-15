@@ -1,0 +1,4972 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:nexova:telemetry:event-schemas:v1",
+  "title": "Nexova — catálogo de eventos de telemetría",
+  "description": "Generado por docs/telemetry/tools/build_schemas.py. No editar a mano. Un evento es válido si cumple exactamente uno de los esquemas de `definitions` (excepto `envelope`). Las claves `x-*` documentan el plan (origen, categoría, entrega, PII, throttle, allowlist) y los validadores draft-07 las ignoran.",
+  "x-envelope-version": "1.0.0",
+  "x-event-count": {
+    "total": 30,
+    "mandatory": 5,
+    "identified": 25
+  },
+  "oneOf": [
+    {
+      "$ref": "#/definitions/inbound_order_created"
+    },
+    {
+      "$ref": "#/definitions/outbound_order_created"
+    },
+    {
+      "$ref": "#/definitions/stock_threshold_triggered"
+    },
+    {
+      "$ref": "#/definitions/direct_stock_edit_rejected"
+    },
+    {
+      "$ref": "#/definitions/kit_cost_variance_detected"
+    },
+    {
+      "$ref": "#/definitions/outbound_order_rejected"
+    },
+    {
+      "$ref": "#/definitions/order_validation_failed"
+    },
+    {
+      "$ref": "#/definitions/product_created"
+    },
+    {
+      "$ref": "#/definitions/stock_threshold_cleared"
+    },
+    {
+      "$ref": "#/definitions/inventory_snapshot_recorded"
+    },
+    {
+      "$ref": "#/definitions/order_form_abandoned"
+    },
+    {
+      "$ref": "#/definitions/supplier_rate_updated"
+    },
+    {
+      "$ref": "#/definitions/supplier_status_changed"
+    },
+    {
+      "$ref": "#/definitions/login_succeeded"
+    },
+    {
+      "$ref": "#/definitions/login_failed"
+    },
+    {
+      "$ref": "#/definitions/session_expired"
+    },
+    {
+      "$ref": "#/definitions/user_logged_out"
+    },
+    {
+      "$ref": "#/definitions/user_registered"
+    },
+    {
+      "$ref": "#/definitions/access_denied"
+    },
+    {
+      "$ref": "#/definitions/api_latency_recorded"
+    },
+    {
+      "$ref": "#/definitions/page_load_recorded"
+    },
+    {
+      "$ref": "#/definitions/db_query_slow_detected"
+    },
+    {
+      "$ref": "#/definitions/api_error_returned"
+    },
+    {
+      "$ref": "#/definitions/frontend_error_captured"
+    },
+    {
+      "$ref": "#/definitions/api_request_failed"
+    },
+    {
+      "$ref": "#/definitions/page_viewed"
+    },
+    {
+      "$ref": "#/definitions/list_filter_applied"
+    },
+    {
+      "$ref": "#/definitions/contact_section_viewed"
+    },
+    {
+      "$ref": "#/definitions/contact_request_submitted"
+    },
+    {
+      "$ref": "#/definitions/telemetry_events_dropped"
+    }
+  ],
+  "definitions": {
+    "envelope": {
+      "type": "object",
+      "description": "Event Envelope v1 de Nexova. Todo evento lo cumple; el payload específico va en `properties`.",
+      "required": [
+        "eventId",
+        "timestamp",
+        "sessionId",
+        "userId",
+        "event_type",
+        "schemaVersion",
+        "requestId",
+        "context",
+        "properties"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "UUID v4 generado UNA vez por ocurrencia, en el emisor. Clave de deduplicación."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+          "description": "Momento de la ocurrencia, ISO 8601 en UTC con milisegundos y sufijo Z (backend: tras el commit)."
+        },
+        "sessionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "UUID de la sesión del navegador (header X-Session-Id). null en jobs."
+        },
+        "userId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "UUID interno del usuario autenticado (users.id). null si es anónimo. Nunca un email."
+        },
+        "event_type": {
+          "type": "string",
+          "pattern": "^[a-z]+(_[a-z]+)+$",
+          "description": "Taxonomía entidad_acción en snake_case; la acción va en participio."
+        },
+        "schemaVersion": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "SemVer del esquema de este event_type."
+        },
+        "requestId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "UUID de correlación frontend–backend–logs (header X-Request-Id). En jobs: id de la ejecución."
+        },
+        "context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "environment",
+            "appVersion"
+          ],
+          "description": "Metadatos técnicos del emisor (no de negocio).",
+          "properties": {
+            "source": {
+              "type": "string",
+              "enum": [
+                "frontend_backoffice",
+                "frontend_website",
+                "backend_api",
+                "backend_job"
+              ]
+            },
+            "environment": {
+              "type": "string",
+              "enum": [
+                "development",
+                "staging",
+                "production"
+              ]
+            },
+            "appVersion": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{7,12}$",
+              "description": "SHA corto de git del build."
+            }
+          }
+        },
+        "properties": {
+          "type": "object",
+          "description": "Payload específico; su allowlist la define cada event_type."
+        }
+      }
+    },
+    "inbound_order_created": {
+      "title": "inbound_order_created",
+      "description": "Se registró (commit OK) una InboundOrder: llegó un lote de material desde un proveedor.",
+      "x-origin": "mandatory",
+      "x-category": "inventory",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "`POST /inventory/orders/inbound` → 201, inmediatamente después del `session.commit()` en el servicio de órdenes de entrada (hoy `create_entry` en `services/api/src/api/inventory/service.py`). Nunca antes del commit ni en un reintento que falle.",
+      "x-rationale": "Capturamos inbound_order_created porque necesitamos saber cuánto material se produce/compra, para qué programa y con qué costo, lo que nos permite planificar la producción de material según la demanda esperada de matrículas (Elena).",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario (02:00 hora de la oficina)",
+        "justification": "La decisión que alimenta es de planificación de producción (horizonte semanas). Ver una entrada con horas de retraso no cambia ninguna acción. La parte urgente (costo anómalo) se separa en `kit_cost_variance_detected`, que va por stream."
+      },
+      "x-pii": "Ninguna. `userId` (UUID interno) va en el envelope. `notes` (texto libre del consultor) **no se emite**: puede contener nombres.",
+      "x-throttle": null,
+      "x-allowlist": [
+        "office",
+        "product_id",
+        "product_category",
+        "programme_id",
+        "quantity",
+        "currency",
+        "order_id",
+        "supplier_id",
+        "unit_cost",
+        "total_cost",
+        "stock_after"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "inbound_order_created"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "office",
+                "product_id",
+                "product_category",
+                "programme_id",
+                "quantity",
+                "currency",
+                "order_id",
+                "supplier_id",
+                "unit_cost",
+                "total_cost",
+                "stock_after"
+              ],
+              "properties": {
+                "office": {
+                  "type": "string",
+                  "description": "Oficina dueña del stock afectado (no la del usuario ni el idioma de la UI).",
+                  "enum": [
+                    "valencia",
+                    "miami"
+                  ]
+                },
+                "product_id": {
+                  "type": "string",
+                  "description": "UUID del Product (material).",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "product_category": {
+                  "type": "string",
+                  "description": "Categoría del Product.",
+                  "enum": [
+                    "training_kit",
+                    "certification",
+                    "onboarding_equipment"
+                  ]
+                },
+                "programme_id": {
+                  "type": "string",
+                  "description": "Slug del programa al que pertenece el material (ej. `ventas-b2b`).",
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+                  "maxLength": 64
+                },
+                "quantity": {
+                  "type": "integer",
+                  "description": "Unidades recibidas en el lote.",
+                  "minimum": 1
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "Moneda de la oficina: `EUR` si office=valencia, `USD` si office=miami. Nunca convertida.",
+                  "enum": [
+                    "EUR",
+                    "USD"
+                  ]
+                },
+                "order_id": {
+                  "type": "string",
+                  "description": "UUID de la InboundOrder.",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "supplier_id": {
+                  "type": "string",
+                  "description": "Identificador del proveedor (ID interno, no su nombre comercial).",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "unit_cost": {
+                  "type": "number",
+                  "description": "Costo unitario del lote. En la moneda de `currency`.",
+                  "minimum": 0
+                },
+                "total_cost": {
+                  "type": "number",
+                  "description": "quantity × unit_cost. En la moneda de `currency`.",
+                  "minimum": 0
+                },
+                "stock_after": {
+                  "type": "integer",
+                  "description": "Stock del Product en esa oficina tras el commit.",
+                  "minimum": 0
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "valencia"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "EUR"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "miami"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "USD"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "inbound_order_created",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "office": "valencia",
+            "product_id": "4f6c2a8e-1b3d-4c5e-9f70-0a1b2c3d4e5f",
+            "product_category": "certification",
+            "programme_id": "ventas-b2b",
+            "quantity": 40,
+            "currency": "EUR",
+            "order_id": "7d2f1e3a-5b6c-4d7e-8f90-1a2b3c4d5e6f",
+            "supplier_id": "sup-imprenta-levante",
+            "unit_cost": 18.5,
+            "total_cost": 740.0,
+            "stock_after": 52
+          }
+        }
+      ]
+    },
+    "outbound_order_created": {
+      "title": "outbound_order_created",
+      "description": "Se registró (commit OK) una OutboundOrder: se entregó un kit o certificado.",
+      "x-origin": "mandatory",
+      "x-category": "inventory",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "`POST /inventory/orders/outbound` → 201, después del commit (hoy `create_exit`). Las salidas rechazadas emiten `outbound_order_rejected`, nunca este evento.",
+      "x-rationale": "Capturamos outbound_order_created porque necesitamos saber qué programas consumen más material y a qué ritmo, lo que nos permite anticipar necesidades de reposición antes de una ola grande de matrículas (Elena).",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario (02:00 hora de la oficina)",
+        "justification": "Anticipar reposición es una decisión de días o semanas basada en tendencia (ritmo de consumo), no en una entrega individual. El caso urgente (quedarse bajo el mínimo) lo cubre `stock_threshold_triggered` por stream."
+      },
+      "x-pii": "El destinatario es una persona (cliente, candidato, consultor o agente): **sólo se emite `recipient_type`**, nunca su nombre, email ni ID de persona (BRIEFING §3). `notes` no se emite.",
+      "x-throttle": null,
+      "x-allowlist": [
+        "office",
+        "product_id",
+        "product_category",
+        "programme_id",
+        "quantity",
+        "currency",
+        "order_id",
+        "recipient_type",
+        "stock_after"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "outbound_order_created"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "office",
+                "product_id",
+                "product_category",
+                "programme_id",
+                "quantity",
+                "currency",
+                "order_id",
+                "recipient_type",
+                "stock_after"
+              ],
+              "properties": {
+                "office": {
+                  "type": "string",
+                  "description": "Oficina dueña del stock afectado (no la del usuario ni el idioma de la UI).",
+                  "enum": [
+                    "valencia",
+                    "miami"
+                  ]
+                },
+                "product_id": {
+                  "type": "string",
+                  "description": "UUID del Product (material).",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "product_category": {
+                  "type": "string",
+                  "description": "Categoría del Product.",
+                  "enum": [
+                    "training_kit",
+                    "certification",
+                    "onboarding_equipment"
+                  ]
+                },
+                "programme_id": {
+                  "type": "string",
+                  "description": "Slug del programa al que pertenece el material (ej. `ventas-b2b`).",
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+                  "maxLength": 64
+                },
+                "quantity": {
+                  "type": "integer",
+                  "description": "Unidades entregadas.",
+                  "minimum": 1
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "Moneda de la oficina: `EUR` si office=valencia, `USD` si office=miami. Nunca convertida.",
+                  "enum": [
+                    "EUR",
+                    "USD"
+                  ]
+                },
+                "order_id": {
+                  "type": "string",
+                  "description": "UUID de la OutboundOrder.",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "recipient_type": {
+                  "type": "string",
+                  "description": "Tipo de destinatario (nunca su identidad).",
+                  "enum": [
+                    "client",
+                    "candidate",
+                    "consultant",
+                    "support_agent"
+                  ]
+                },
+                "stock_after": {
+                  "type": "integer",
+                  "description": "Stock del Product en esa oficina tras el commit.",
+                  "minimum": 0
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "valencia"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "EUR"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "miami"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "USD"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "outbound_order_created",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "office": "miami",
+            "product_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+            "product_category": "onboarding_equipment",
+            "programme_id": "soporte-onboarding",
+            "quantity": 1,
+            "currency": "USD",
+            "order_id": "0b1c2d3e-4f5a-4b6c-9d7e-8f9a0b1c2d3e",
+            "recipient_type": "support_agent",
+            "stock_after": 7
+          }
+        }
+      ]
+    },
+    "stock_threshold_triggered": {
+      "title": "stock_threshold_triggered",
+      "description": "El stock de un Product en una oficina cruzó hacia abajo su mínimo configurado (`stock_after < min_stock`).",
+      "x-origin": "mandatory",
+      "x-category": "inventory",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "Se evalúa en la misma transacción lógica que una OutboundOrder (tras su commit) y al cambiar `min_stock` de un Product. Se emite **sólo en el cruce** (`stock_before >= min_stock` y `stock_after < min_stock`), no en cada orden mientras siga por debajo (histéresis, ver §5.3).",
+      "x-rationale": "Capturamos stock_threshold_triggered porque necesitamos saber con qué frecuencia un programa se queda sin material disponible, lo que nos permite ajustar el umbral mínimo o acelerar la reimpresión/reproducción de ese material.",
+      "x-delivery": {
+        "mode": "stream",
+        "cadence": "≤ 1 min, con alerta a L&D (Elena) y a la oficina",
+        "justification": "Reimprimir o reproducir material tiene plazo de entrega de días: cada hora que pasa sin enterarse reduce el margen antes de quedarse sin kits para una matrícula. Es la única señal de inventario que exige acción el mismo día."
+      },
+      "x-pii": "Ninguna.",
+      "x-throttle": "Edge-triggered con histéresis: un solo evento por episodio (producto+oficina) hasta que `stock_threshold_cleared` lo rearme.",
+      "x-allowlist": [
+        "office",
+        "product_id",
+        "product_category",
+        "programme_id",
+        "quantity",
+        "currency",
+        "min_stock",
+        "stock_before",
+        "trigger_source",
+        "triggering_order_id"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "stock_threshold_triggered"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "office",
+                "product_id",
+                "product_category",
+                "programme_id",
+                "quantity",
+                "currency",
+                "min_stock",
+                "stock_before",
+                "trigger_source"
+              ],
+              "properties": {
+                "office": {
+                  "type": "string",
+                  "description": "Oficina dueña del stock afectado (no la del usuario ni el idioma de la UI).",
+                  "enum": [
+                    "valencia",
+                    "miami"
+                  ]
+                },
+                "product_id": {
+                  "type": "string",
+                  "description": "UUID del Product (material).",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "product_category": {
+                  "type": "string",
+                  "description": "Categoría del Product.",
+                  "enum": [
+                    "training_kit",
+                    "certification",
+                    "onboarding_equipment"
+                  ]
+                },
+                "programme_id": {
+                  "type": "string",
+                  "description": "Slug del programa al que pertenece el material (ej. `ventas-b2b`).",
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+                  "maxLength": 64
+                },
+                "quantity": {
+                  "type": "integer",
+                  "description": "Stock resultante tras el cruce (= `stock_after`). 0 indica agotado.",
+                  "minimum": 0
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "Moneda de la oficina: `EUR` si office=valencia, `USD` si office=miami. Nunca convertida.",
+                  "enum": [
+                    "EUR",
+                    "USD"
+                  ]
+                },
+                "min_stock": {
+                  "type": "integer",
+                  "description": "Mínimo configurado del Product en esa oficina al momento del cruce.",
+                  "minimum": 0
+                },
+                "stock_before": {
+                  "type": "integer",
+                  "description": "Stock antes de la operación que provocó el cruce.",
+                  "minimum": 0
+                },
+                "trigger_source": {
+                  "type": "string",
+                  "description": "Qué provocó el cruce.",
+                  "enum": [
+                    "outbound_order",
+                    "min_stock_updated"
+                  ]
+                },
+                "triggering_order_id": {
+                  "type": "string",
+                  "description": "UUID de la OutboundOrder causante (sólo si trigger_source=outbound_order).",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "valencia"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "EUR"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "miami"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "USD"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "trigger_source": {
+                        "const": "outbound_order"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "triggering_order_id"
+                    ]
+                  }
+                }
+              ]
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "stock_threshold_triggered",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "office": "valencia",
+            "product_id": "4f6c2a8e-1b3d-4c5e-9f70-0a1b2c3d4e5f",
+            "product_category": "certification",
+            "programme_id": "ventas-b2b",
+            "quantity": 4,
+            "currency": "EUR",
+            "min_stock": 5,
+            "stock_before": 6,
+            "trigger_source": "outbound_order",
+            "triggering_order_id": "0b1c2d3e-4f5a-4b6c-9d7e-8f9a0b1c2d3e"
+          }
+        }
+      ]
+    },
+    "direct_stock_edit_rejected": {
+      "title": "direct_stock_edit_rejected",
+      "description": "Un usuario autenticado intentó modificar el stock fuera de una orden y el API lo rechazó.",
+      "x-origin": "mandatory",
+      "x-category": "inventory",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "El API rechaza (ver §3.3 del plan): (a) `PUT`/`PATCH`/`DELETE` sobre `/inventory/products/{product_id}/stock` → 405; (b) un body de `POST /inventory/products` o `PUT/PATCH /inventory/products/{product_id}` que incluya una clave de stock (`current_stock`, `stock`, `quantity`) → 422. Sólo se emite si el Product existe (si no, es un 404 normal).",
+      "x-rationale": "Capturamos direct_stock_edit_rejected porque necesitamos saber si el personal intenta saltarse el control de trazabilidad del material, lo que nos permite reforzar capacitación o permisos en la oficina donde esto ocurre con más frecuencia (Patricia).",
+      "x-delivery": {
+        "mode": "stream",
+        "cadence": "≤ 1 min, alerta si ≥ 3 intentos del mismo userId en 10 min",
+        "justification": "La decisión de Patricia (capacitación/permisos) se toma con el agregado semanal. Pero un intento de saltarse la trazabilidad también puede ser un script o una cuenta comprometida: eso hay que detectarlo en minutos, no al día siguiente. El agregado semanal se calcula sobre el mismo flujo."
+      },
+      "x-pii": "Ninguna. El userId (UUID interno) va en el envelope para poder agregar por persona sin exponer su identidad.",
+      "x-throttle": null,
+      "x-allowlist": [
+        "office",
+        "product_id",
+        "product_category",
+        "programme_id",
+        "quantity",
+        "currency",
+        "attempt_channel",
+        "endpoint",
+        "http_method",
+        "http_status",
+        "user_role"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "direct_stock_edit_rejected"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "office",
+                "product_id",
+                "product_category",
+                "programme_id",
+                "quantity",
+                "currency",
+                "attempt_channel",
+                "endpoint",
+                "http_method",
+                "http_status",
+                "user_role"
+              ],
+              "properties": {
+                "office": {
+                  "type": "string",
+                  "description": "Oficina dueña del stock afectado (no la del usuario ni el idioma de la UI).",
+                  "enum": [
+                    "valencia",
+                    "miami"
+                  ]
+                },
+                "product_id": {
+                  "type": "string",
+                  "description": "UUID del Product (material).",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "product_category": {
+                  "type": "string",
+                  "description": "Categoría del Product.",
+                  "enum": [
+                    "training_kit",
+                    "certification",
+                    "onboarding_equipment"
+                  ]
+                },
+                "programme_id": {
+                  "type": "string",
+                  "description": "Slug del programa al que pertenece el material (ej. `ventas-b2b`).",
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+                  "maxLength": 64
+                },
+                "quantity": {
+                  "type": "integer",
+                  "description": "Valor de stock que se intentó fijar (o la cantidad del cambio). 0 si no se pudo leer del body.",
+                  "minimum": 0
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "Moneda de la oficina: `EUR` si office=valencia, `USD` si office=miami. Nunca convertida.",
+                  "enum": [
+                    "EUR",
+                    "USD"
+                  ]
+                },
+                "attempt_channel": {
+                  "type": "string",
+                  "description": "Cómo se intentó.",
+                  "enum": [
+                    "stock_endpoint_write",
+                    "stock_field_in_product_payload"
+                  ]
+                },
+                "endpoint": {
+                  "type": "string",
+                  "description": "Plantilla de ruta del API (sin IDs reales ni query string).",
+                  "enum": [
+                    "/",
+                    "/health",
+                    "/auth/login",
+                    "/auth/me",
+                    "/users",
+                    "/users/{user_id}",
+                    "/profiles/me",
+                    "/inventory/products",
+                    "/inventory/products/{product_id}",
+                    "/inventory/products/{product_id}/stock",
+                    "/inventory/orders",
+                    "/inventory/orders/inbound",
+                    "/inventory/orders/outbound",
+                    "/suppliers",
+                    "/suppliers/{supplier_id}",
+                    "/suppliers/{supplier_id}/rate",
+                    "/suppliers/{supplier_id}/status",
+                    "/candidates",
+                    "/clients",
+                    "/vacancies",
+                    "/interviews",
+                    "/evaluations"
+                  ]
+                },
+                "http_method": {
+                  "type": "string",
+                  "description": "Método HTTP del intento.",
+                  "enum": [
+                    "GET",
+                    "POST",
+                    "PUT",
+                    "PATCH",
+                    "DELETE"
+                  ]
+                },
+                "http_status": {
+                  "type": "integer",
+                  "description": "Código devuelto por el API.",
+                  "enum": [
+                    405,
+                    422
+                  ]
+                },
+                "user_role": {
+                  "type": "string",
+                  "description": "Rol del usuario que lo intentó.",
+                  "enum": [
+                    "admin",
+                    "recruiter",
+                    "client",
+                    "candidate",
+                    "user"
+                  ]
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "valencia"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "EUR"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "miami"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "USD"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "direct_stock_edit_rejected",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "office": "miami",
+            "product_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+            "product_category": "onboarding_equipment",
+            "programme_id": "soporte-onboarding",
+            "quantity": 30,
+            "currency": "USD",
+            "attempt_channel": "stock_field_in_product_payload",
+            "endpoint": "/inventory/products/{product_id}",
+            "http_method": "PATCH",
+            "http_status": 422,
+            "user_role": "user"
+          }
+        }
+      ]
+    },
+    "kit_cost_variance_detected": {
+      "title": "kit_cost_variance_detected",
+      "description": "El costo unitario de una InboundOrder se desvía más que el umbral respecto al histórico del mismo material y proveedor.",
+      "x-origin": "mandatory",
+      "x-category": "inventory",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "Tras el commit de una InboundOrder. Baseline = media de `unit_cost` de las **últimas 5** InboundOrders del mismo `product_id` + `supplier_id` + `currency` en los últimos 365 días, excluyendo la actual. Se emite si `|variance_pct| > threshold_pct` (por defecto 10) **y** el baseline tiene ≥ 3 órdenes. Sin conversión de moneda: sólo se compara contra la misma moneda.",
+      "x-rationale": "Capturamos kit_cost_variance_detected porque necesitamos saber cuándo un proveedor de material sube precios de forma anómala, lo que nos permite alertar a Elena y a Laura para renegociar o buscar un proveedor alternativo.",
+      "x-delivery": {
+        "mode": "stream",
+        "cadence": "≤ 1 min, alerta si direction=increase",
+        "justification": "El BRIEFING pide alertar: el valor está en enterarse antes de aprobar el pago o confirmar el siguiente pedido a ese proveedor. Las bajadas (direction=decrease) también se emiten porque suelen ser errores de carga, pero se revisan en el lote diario."
+      },
+      "x-pii": "Ninguna.",
+      "x-throttle": null,
+      "x-allowlist": [
+        "office",
+        "product_id",
+        "product_category",
+        "programme_id",
+        "quantity",
+        "currency",
+        "inbound_order_id",
+        "supplier_id",
+        "unit_cost",
+        "baseline_unit_cost",
+        "variance_pct",
+        "direction",
+        "threshold_pct",
+        "baseline_sample_size"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "kit_cost_variance_detected"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "office",
+                "product_id",
+                "product_category",
+                "programme_id",
+                "quantity",
+                "currency",
+                "inbound_order_id",
+                "supplier_id",
+                "unit_cost",
+                "baseline_unit_cost",
+                "variance_pct",
+                "direction",
+                "threshold_pct",
+                "baseline_sample_size"
+              ],
+              "properties": {
+                "office": {
+                  "type": "string",
+                  "description": "Oficina dueña del stock afectado (no la del usuario ni el idioma de la UI).",
+                  "enum": [
+                    "valencia",
+                    "miami"
+                  ]
+                },
+                "product_id": {
+                  "type": "string",
+                  "description": "UUID del Product (material).",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "product_category": {
+                  "type": "string",
+                  "description": "Categoría del Product.",
+                  "enum": [
+                    "training_kit",
+                    "certification",
+                    "onboarding_equipment"
+                  ]
+                },
+                "programme_id": {
+                  "type": "string",
+                  "description": "Slug del programa al que pertenece el material (ej. `ventas-b2b`).",
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+                  "maxLength": 64
+                },
+                "quantity": {
+                  "type": "integer",
+                  "description": "Unidades del lote que disparó la desviación.",
+                  "minimum": 1
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "Moneda de la oficina: `EUR` si office=valencia, `USD` si office=miami. Nunca convertida.",
+                  "enum": [
+                    "EUR",
+                    "USD"
+                  ]
+                },
+                "inbound_order_id": {
+                  "type": "string",
+                  "description": "UUID de la InboundOrder evaluada.",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "supplier_id": {
+                  "type": "string",
+                  "description": "Identificador interno del proveedor.",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "unit_cost": {
+                  "type": "number",
+                  "description": "Costo unitario de esta orden. En la moneda de `currency`.",
+                  "minimum": 0
+                },
+                "baseline_unit_cost": {
+                  "type": "number",
+                  "description": "Media del histórico comparable. En la moneda de `currency`.",
+                  "minimum": 0
+                },
+                "variance_pct": {
+                  "type": "number",
+                  "description": "(unit_cost − baseline) / baseline × 100. Con signo."
+                },
+                "direction": {
+                  "type": "string",
+                  "description": "Sentido de la desviación.",
+                  "enum": [
+                    "increase",
+                    "decrease"
+                  ]
+                },
+                "threshold_pct": {
+                  "type": "number",
+                  "description": "Umbral vigente al evaluar (configurable).",
+                  "exclusiveMinimum": 0
+                },
+                "baseline_sample_size": {
+                  "type": "integer",
+                  "description": "Órdenes usadas en el baseline (3–5).",
+                  "minimum": 3,
+                  "maximum": 5
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "valencia"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "EUR"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "miami"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "USD"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "direction": {
+                        "const": "increase"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "variance_pct": {
+                        "exclusiveMinimum": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "direction": {
+                        "const": "decrease"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "variance_pct": {
+                        "exclusiveMaximum": 0
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "kit_cost_variance_detected",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "office": "valencia",
+            "product_id": "4f6c2a8e-1b3d-4c5e-9f70-0a1b2c3d4e5f",
+            "product_category": "certification",
+            "programme_id": "ventas-b2b",
+            "quantity": 40,
+            "currency": "EUR",
+            "inbound_order_id": "7d2f1e3a-5b6c-4d7e-8f90-1a2b3c4d5e6f",
+            "supplier_id": "sup-imprenta-levante",
+            "unit_cost": 21.4,
+            "baseline_unit_cost": 18.6,
+            "variance_pct": 15.05,
+            "direction": "increase",
+            "threshold_pct": 10,
+            "baseline_sample_size": 5
+          }
+        }
+      ]
+    },
+    "outbound_order_rejected": {
+      "title": "outbound_order_rejected",
+      "description": "Una OutboundOrder fue rechazada por falta de stock (hoy HTTP 400 en `create_exit`).",
+      "x-origin": "identified",
+      "x-category": "inventory",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "`POST /inventory/orders/outbound` → 400 por stock insuficiente, en la rama `ValueError` del router.",
+      "x-rationale": "Capturamos outbound_order_rejected porque necesitamos saber cuánta demanda de material no se pudo entregar (demanda oculta que las salidas exitosas no muestran), lo que nos permite subir `min_stock` o adelantar la reposición de los programas con más entregas rechazadas.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "Lo que se decide es el ajuste de mínimos y reposición, una revisión periódica. La urgencia operativa ya la cubre `stock_threshold_triggered`."
+      },
+      "x-pii": "Ninguna (sólo `recipient_type`).",
+      "x-throttle": null,
+      "x-allowlist": [
+        "office",
+        "product_id",
+        "product_category",
+        "programme_id",
+        "quantity",
+        "currency",
+        "stock_available",
+        "rejection_reason",
+        "recipient_type"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "outbound_order_rejected"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "office",
+                "product_id",
+                "product_category",
+                "programme_id",
+                "quantity",
+                "currency",
+                "stock_available",
+                "rejection_reason",
+                "recipient_type"
+              ],
+              "properties": {
+                "office": {
+                  "type": "string",
+                  "description": "Oficina dueña del stock afectado (no la del usuario ni el idioma de la UI).",
+                  "enum": [
+                    "valencia",
+                    "miami"
+                  ]
+                },
+                "product_id": {
+                  "type": "string",
+                  "description": "UUID del Product (material).",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "product_category": {
+                  "type": "string",
+                  "description": "Categoría del Product.",
+                  "enum": [
+                    "training_kit",
+                    "certification",
+                    "onboarding_equipment"
+                  ]
+                },
+                "programme_id": {
+                  "type": "string",
+                  "description": "Slug del programa al que pertenece el material (ej. `ventas-b2b`).",
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+                  "maxLength": 64
+                },
+                "quantity": {
+                  "type": "integer",
+                  "description": "Unidades solicitadas que no se pudieron entregar.",
+                  "minimum": 1
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "Moneda de la oficina: `EUR` si office=valencia, `USD` si office=miami. Nunca convertida.",
+                  "enum": [
+                    "EUR",
+                    "USD"
+                  ]
+                },
+                "stock_available": {
+                  "type": "integer",
+                  "description": "Stock disponible al rechazar.",
+                  "minimum": 0
+                },
+                "rejection_reason": {
+                  "type": "string",
+                  "description": "Motivo.",
+                  "enum": [
+                    "insufficient_stock"
+                  ]
+                },
+                "recipient_type": {
+                  "type": "string",
+                  "description": "Tipo de destinatario previsto.",
+                  "enum": [
+                    "client",
+                    "candidate",
+                    "consultant",
+                    "support_agent"
+                  ]
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "valencia"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "EUR"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "miami"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "USD"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "outbound_order_rejected",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "office": "miami",
+            "product_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+            "product_category": "onboarding_equipment",
+            "programme_id": "soporte-onboarding",
+            "quantity": 5,
+            "currency": "USD",
+            "stock_available": 2,
+            "rejection_reason": "insufficient_stock",
+            "recipient_type": "support_agent"
+          }
+        }
+      ]
+    },
+    "order_validation_failed": {
+      "title": "order_validation_failed",
+      "description": "Una orden o alta de Product no pasó la validación, en el cliente (formulario) o en el servidor (422).",
+      "x-origin": "identified",
+      "x-category": "inventory",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "Servidor: handler de `RequestValidationError` para `/inventory/*` (422). Cliente: al pulsar *Registrar* en el formulario de órdenes si la validación local bloquea el envío (hoy `handleSubmit` en `talent-order-form.tsx`). **Nunca por pulsación de tecla.**",
+      "x-rationale": "Capturamos order_validation_failed porque necesitamos saber qué productos y qué campos acumulan más errores de validación (pregunta literal del tech lead), lo que nos permite corregir el formulario o la ayuda contextual de los campos más fallados, o capacitar en la oficina con más errores.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "Mejorar UX y capacitar son decisiones de sprint. Un error de validación no causa daño: la orden simplemente no se guarda."
+      },
+      "x-pii": "Riesgo: los mensajes de Pydantic incluyen el **valor** recibido (`input`). Se emiten sólo `loc[-1]` (nombre de campo, contra allowlist) y `type`. Nunca `msg` ni `input`.",
+      "x-throttle": null,
+      "x-allowlist": [
+        "validation_layer",
+        "order_type",
+        "invalid_fields",
+        "error_codes",
+        "product_id",
+        "office",
+        "programme_id"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "order_validation_failed"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "validation_layer",
+                "order_type",
+                "invalid_fields",
+                "error_codes"
+              ],
+              "properties": {
+                "validation_layer": {
+                  "type": "string",
+                  "description": "Dónde falló.",
+                  "enum": [
+                    "client",
+                    "server"
+                  ]
+                },
+                "order_type": {
+                  "type": "string",
+                  "description": "Qué se intentaba registrar.",
+                  "enum": [
+                    "inbound",
+                    "outbound",
+                    "product"
+                  ]
+                },
+                "invalid_fields": {
+                  "type": "array",
+                  "description": "Nombres de los campos inválidos (nunca sus valores).",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "product_id",
+                      "quantity",
+                      "notes",
+                      "unit_cost",
+                      "supplier_id",
+                      "recipient_type",
+                      "currency",
+                      "office",
+                      "name",
+                      "product_category",
+                      "programme_id",
+                      "min_stock",
+                      "description"
+                    ]
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                },
+                "error_codes": {
+                  "type": "array",
+                  "description": "Tipos de error de Pydantic o códigos de la validación cliente (ej. `greater_than`, `missing`, `exceeds_stock`).",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z_]{2,40}$"
+                  },
+                  "minItems": 1
+                },
+                "product_id": {
+                  "type": "string",
+                  "description": "UUID del Product (material).",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "office": {
+                  "type": "string",
+                  "description": "Oficina del Product, si se pudo resolver.",
+                  "enum": [
+                    "valencia",
+                    "miami"
+                  ]
+                },
+                "programme_id": {
+                  "type": "string",
+                  "description": "Programa del Product, si se pudo resolver.",
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+                  "maxLength": 64
+                }
+              }
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "order_validation_failed",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "validation_layer": "server",
+            "order_type": "outbound",
+            "invalid_fields": [
+              "quantity"
+            ],
+            "error_codes": [
+              "greater_than"
+            ],
+            "product_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+            "office": "miami",
+            "programme_id": "soporte-onboarding"
+          }
+        }
+      ]
+    },
+    "product_created": {
+      "title": "product_created",
+      "description": "Se dio de alta un Product (ítem de material) en una oficina.",
+      "x-origin": "identified",
+      "x-category": "inventory",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "`POST /inventory/products` → 201, tras el commit.",
+      "x-rationale": "Capturamos product_created porque necesitamos saber cómo crece el catálogo por programa y oficina, y si se duplican ítems, lo que nos permite auditar el catálogo (fusionar duplicados) y validar que cada programa activo tenga su material dado de alta en ambas oficinas.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "Las altas son poco frecuentes y la auditoría de catálogo es mensual."
+      },
+      "x-pii": "Ninguna. El nombre del Product es descriptivo del material, pero no se emite: basta `product_id` (se resuelve contra la tabla).",
+      "x-throttle": null,
+      "x-allowlist": [
+        "office",
+        "product_id",
+        "product_category",
+        "programme_id",
+        "currency",
+        "min_stock"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "product_created"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "office",
+                "product_id",
+                "product_category",
+                "programme_id",
+                "currency",
+                "min_stock"
+              ],
+              "properties": {
+                "office": {
+                  "type": "string",
+                  "description": "Oficina dueña del stock afectado (no la del usuario ni el idioma de la UI).",
+                  "enum": [
+                    "valencia",
+                    "miami"
+                  ]
+                },
+                "product_id": {
+                  "type": "string",
+                  "description": "UUID del Product (material).",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "product_category": {
+                  "type": "string",
+                  "description": "Categoría del Product.",
+                  "enum": [
+                    "training_kit",
+                    "certification",
+                    "onboarding_equipment"
+                  ]
+                },
+                "programme_id": {
+                  "type": "string",
+                  "description": "Slug del programa al que pertenece el material (ej. `ventas-b2b`).",
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+                  "maxLength": 64
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "Moneda de la oficina: `EUR` si office=valencia, `USD` si office=miami. Nunca convertida.",
+                  "enum": [
+                    "EUR",
+                    "USD"
+                  ]
+                },
+                "min_stock": {
+                  "type": "integer",
+                  "description": "Mínimo configurado al crear.",
+                  "minimum": 0
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "valencia"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "EUR"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "miami"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "USD"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "product_created",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "office": "valencia",
+            "product_id": "4f6c2a8e-1b3d-4c5e-9f70-0a1b2c3d4e5f",
+            "product_category": "certification",
+            "programme_id": "ventas-b2b",
+            "currency": "EUR",
+            "min_stock": 5
+          }
+        }
+      ]
+    },
+    "stock_threshold_cleared": {
+      "title": "stock_threshold_cleared",
+      "description": "Un Product que estaba bajo su mínimo volvió a `stock >= min_stock` (cierra el episodio abierto por `stock_threshold_triggered`).",
+      "x-origin": "identified",
+      "x-category": "inventory",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "Tras el commit de una InboundOrder (o una bajada de `min_stock`) cuando `stock_before < min_stock` y `stock_after >= min_stock`.",
+      "x-rationale": "Capturamos stock_threshold_cleared porque necesitamos saber cuánto tarda cada programa en reponer material una vez bajo el mínimo (tiempo de reposición real), lo que nos permite exigir plazos de entrega a proveedores lentos o subir el mínimo de los programas con episodios largos.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "Mide duración de episodios ya cerrados: es análisis, no reacción."
+      },
+      "x-pii": "Ninguna.",
+      "x-throttle": null,
+      "x-allowlist": [
+        "office",
+        "product_id",
+        "product_category",
+        "programme_id",
+        "quantity",
+        "currency",
+        "min_stock",
+        "episode_duration_minutes",
+        "clear_source"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "stock_threshold_cleared"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "office",
+                "product_id",
+                "product_category",
+                "programme_id",
+                "quantity",
+                "currency",
+                "min_stock",
+                "episode_duration_minutes",
+                "clear_source"
+              ],
+              "properties": {
+                "office": {
+                  "type": "string",
+                  "description": "Oficina dueña del stock afectado (no la del usuario ni el idioma de la UI).",
+                  "enum": [
+                    "valencia",
+                    "miami"
+                  ]
+                },
+                "product_id": {
+                  "type": "string",
+                  "description": "UUID del Product (material).",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "product_category": {
+                  "type": "string",
+                  "description": "Categoría del Product.",
+                  "enum": [
+                    "training_kit",
+                    "certification",
+                    "onboarding_equipment"
+                  ]
+                },
+                "programme_id": {
+                  "type": "string",
+                  "description": "Slug del programa al que pertenece el material (ej. `ventas-b2b`).",
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+                  "maxLength": 64
+                },
+                "quantity": {
+                  "type": "integer",
+                  "description": "Stock tras la reposición (= stock_after).",
+                  "minimum": 0
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "Moneda de la oficina: `EUR` si office=valencia, `USD` si office=miami. Nunca convertida.",
+                  "enum": [
+                    "EUR",
+                    "USD"
+                  ]
+                },
+                "min_stock": {
+                  "type": "integer",
+                  "description": "Mínimo vigente.",
+                  "minimum": 0
+                },
+                "episode_duration_minutes": {
+                  "type": "integer",
+                  "description": "Minutos desde el `stock_threshold_triggered` que abrió el episodio.",
+                  "minimum": 0
+                },
+                "clear_source": {
+                  "type": "string",
+                  "description": "Qué cerró el episodio.",
+                  "enum": [
+                    "inbound_order",
+                    "min_stock_updated"
+                  ]
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "valencia"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "EUR"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "miami"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "USD"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "stock_threshold_cleared",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "office": "valencia",
+            "product_id": "4f6c2a8e-1b3d-4c5e-9f70-0a1b2c3d4e5f",
+            "product_category": "certification",
+            "programme_id": "ventas-b2b",
+            "quantity": 44,
+            "currency": "EUR",
+            "min_stock": 5,
+            "episode_duration_minutes": 4320,
+            "clear_source": "inbound_order"
+          }
+        }
+      ]
+    },
+    "inventory_snapshot_recorded": {
+      "title": "inventory_snapshot_recorded",
+      "description": "Foto diaria del stock por Product y oficina, generada por un job programado.",
+      "x-origin": "identified",
+      "x-category": "inventory",
+      "x-source": [
+        "backend_job"
+      ],
+      "x-trigger": "Job diario a las 23:55 hora de cada oficina: un evento por Product activo de esa oficina. `userId` y `sessionId` = null; `requestId` = id de la ejecución del job.",
+      "x-rationale": "Capturamos inventory_snapshot_recorded porque necesitamos saber la evolución del stock y su cobertura sin tener que recalcular todo el ledger para cada reporte, lo que nos permite alimentar el reporte ejecutivo semanal de Laura (cobertura de material por programa y oficina) y detectar material inmovilizado.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "Es por definición una foto diaria. Nadie decide nada en tiempo real con ella."
+      },
+      "x-pii": "Ninguna.",
+      "x-throttle": null,
+      "x-allowlist": [
+        "office",
+        "product_id",
+        "product_category",
+        "programme_id",
+        "quantity",
+        "currency",
+        "min_stock",
+        "snapshot_date",
+        "stock_value"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "inventory_snapshot_recorded"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_job"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "office",
+                "product_id",
+                "product_category",
+                "programme_id",
+                "quantity",
+                "currency",
+                "min_stock",
+                "snapshot_date"
+              ],
+              "properties": {
+                "office": {
+                  "type": "string",
+                  "description": "Oficina dueña del stock afectado (no la del usuario ni el idioma de la UI).",
+                  "enum": [
+                    "valencia",
+                    "miami"
+                  ]
+                },
+                "product_id": {
+                  "type": "string",
+                  "description": "UUID del Product (material).",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "product_category": {
+                  "type": "string",
+                  "description": "Categoría del Product.",
+                  "enum": [
+                    "training_kit",
+                    "certification",
+                    "onboarding_equipment"
+                  ]
+                },
+                "programme_id": {
+                  "type": "string",
+                  "description": "Slug del programa al que pertenece el material (ej. `ventas-b2b`).",
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+                  "maxLength": 64
+                },
+                "quantity": {
+                  "type": "integer",
+                  "description": "Stock al cierre del día.",
+                  "minimum": 0
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "Moneda de la oficina: `EUR` si office=valencia, `USD` si office=miami. Nunca convertida.",
+                  "enum": [
+                    "EUR",
+                    "USD"
+                  ]
+                },
+                "min_stock": {
+                  "type": "integer",
+                  "description": "Mínimo vigente.",
+                  "minimum": 0
+                },
+                "snapshot_date": {
+                  "type": "string",
+                  "description": "Fecha local de la oficina (YYYY-MM-DD).",
+                  "format": "date"
+                },
+                "stock_value": {
+                  "type": "number",
+                  "description": "Valor del stock = stock × último unit_cost conocido. Omitir si no hay costo. En la moneda de `currency`.",
+                  "minimum": 0
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "valencia"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "EUR"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "miami"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "USD"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "sessionId": {
+              "type": "null"
+            },
+            "userId": {
+              "type": "null"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": null,
+          "userId": null,
+          "event_type": "inventory_snapshot_recorded",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_job",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "office": "miami",
+            "product_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+            "product_category": "onboarding_equipment",
+            "programme_id": "soporte-onboarding",
+            "quantity": 7,
+            "currency": "USD",
+            "min_stock": 5,
+            "snapshot_date": "2026-11-15",
+            "stock_value": 6230.0
+          }
+        }
+      ]
+    },
+    "order_form_abandoned": {
+      "title": "order_form_abandoned",
+      "description": "El usuario empezó a completar un formulario de orden y salió sin registrarla.",
+      "x-origin": "identified",
+      "x-category": "navigation",
+      "x-source": [
+        "frontend_backoffice"
+      ],
+      "x-trigger": "En el formulario de órdenes (hoy `talent-order-form.tsx`): si se llegó al menos a `product_selected` y no hubo envío exitoso, se emite al desmontar el componente (cambio de ruta) o en `pagehide`, con `navigator.sendBeacon`.",
+      "x-rationale": "Capturamos order_form_abandoned porque necesitamos saber si hay fricción que hace abandonar las órdenes (por ejemplo, el aviso de stock insuficiente en salidas), lo que nos permite rediseñar el paso donde más se abandona (ej. sugerir una oficina con stock o pedir reposición desde el propio formulario).",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "Lleva a cambios de diseño, que se priorizan por sprint."
+      },
+      "x-pii": "Ninguna. Nunca se emiten los valores de *Notas* ni de *Cantidad*.",
+      "x-throttle": null,
+      "x-allowlist": [
+        "order_type",
+        "step_reached",
+        "time_on_form_ms",
+        "had_stock_warning",
+        "product_id",
+        "office"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "order_form_abandoned"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "frontend_backoffice"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "order_type",
+                "step_reached",
+                "time_on_form_ms",
+                "had_stock_warning"
+              ],
+              "properties": {
+                "order_type": {
+                  "type": "string",
+                  "description": "Tipo de formulario.",
+                  "enum": [
+                    "inbound",
+                    "outbound"
+                  ]
+                },
+                "step_reached": {
+                  "type": "string",
+                  "description": "Último paso alcanzado.",
+                  "enum": [
+                    "product_selected",
+                    "quantity_entered",
+                    "submit_failed"
+                  ]
+                },
+                "time_on_form_ms": {
+                  "type": "integer",
+                  "description": "Tiempo desde que se mostró el formulario En milisegundos.",
+                  "minimum": 0
+                },
+                "had_stock_warning": {
+                  "type": "boolean",
+                  "description": "Si se mostró el aviso «la cantidad supera el stock disponible»."
+                },
+                "product_id": {
+                  "type": "string",
+                  "description": "UUID del Product (material).",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "office": {
+                  "type": "string",
+                  "description": "Oficina del Product seleccionado.",
+                  "enum": [
+                    "valencia",
+                    "miami"
+                  ]
+                }
+              }
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "order_form_abandoned",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "frontend_backoffice",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "order_type": "outbound",
+            "step_reached": "quantity_entered",
+            "time_on_form_ms": 48200,
+            "had_stock_warning": true,
+            "product_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+            "office": "miami"
+          }
+        }
+      ]
+    },
+    "supplier_rate_updated": {
+      "title": "supplier_rate_updated",
+      "description": "Se cambió la tarifa mensual de un proveedor del directorio.",
+      "x-origin": "identified",
+      "x-category": "suppliers",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "`PATCH /suppliers/{supplier_id}/rate` → 200 (hoy `update_supplier_rate` en `services/api/routes/suppliers.py`).",
+      "x-rationale": "Capturamos supplier_rate_updated porque necesitamos saber cómo evolucionan los costos fijos de proveedores (no sólo los de material) por oficina, lo que nos permite calendarizar renegociaciones y comparar contra `kit_cost_variance_detected` del mismo proveedor.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "Son contratos mensuales: la decisión de renegociar se toma en semanas."
+      },
+      "x-pii": "`contact_email` del proveedor **no se emite**.",
+      "x-throttle": null,
+      "x-allowlist": [
+        "supplier_id",
+        "office",
+        "currency",
+        "previous_monthly_rate",
+        "new_monthly_rate",
+        "change_pct"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "supplier_rate_updated"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "supplier_id",
+                "office",
+                "currency",
+                "previous_monthly_rate",
+                "new_monthly_rate",
+                "change_pct"
+              ],
+              "properties": {
+                "supplier_id": {
+                  "type": "string",
+                  "description": "ID interno del proveedor.",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "office": {
+                  "type": "string",
+                  "description": "Oficina del contrato (Spain → valencia, USA → miami).",
+                  "enum": [
+                    "valencia",
+                    "miami"
+                  ]
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "Moneda de la oficina: `EUR` si office=valencia, `USD` si office=miami. Nunca convertida.",
+                  "enum": [
+                    "EUR",
+                    "USD"
+                  ]
+                },
+                "previous_monthly_rate": {
+                  "type": "number",
+                  "description": "Tarifa anterior. En la moneda de `currency`.",
+                  "minimum": 0
+                },
+                "new_monthly_rate": {
+                  "type": "number",
+                  "description": "Tarifa nueva. En la moneda de `currency`.",
+                  "minimum": 0
+                },
+                "change_pct": {
+                  "type": "number",
+                  "description": "(nueva − anterior) / anterior × 100."
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "valencia"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "EUR"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "office": {
+                        "const": "miami"
+                      }
+                    },
+                    "required": [
+                      "office",
+                      "currency"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "currency": {
+                        "const": "USD"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "supplier_rate_updated",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "supplier_id": "17",
+            "office": "valencia",
+            "currency": "EUR",
+            "previous_monthly_rate": 490.0,
+            "new_monthly_rate": 540.0,
+            "change_pct": 10.2
+          }
+        }
+      ]
+    },
+    "supplier_status_changed": {
+      "title": "supplier_status_changed",
+      "description": "Un proveedor pasó de activo a suspendido o al revés.",
+      "x-origin": "identified",
+      "x-category": "suppliers",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "`PATCH /suppliers/{supplier_id}/status` → 200, sólo si el estado cambió.",
+      "x-rationale": "Capturamos supplier_status_changed porque necesitamos saber si alguna categoría de servicio se queda sin proveedor activo en una oficina, lo que nos permite buscar un proveedor alternativo antes de que una suspensión deje un programa sin material.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "Una suspensión es una decisión deliberada del equipo; la revisión de cobertura es semanal."
+      },
+      "x-pii": "Ninguna.",
+      "x-throttle": null,
+      "x-allowlist": [
+        "supplier_id",
+        "office",
+        "previous_status",
+        "new_status",
+        "supplier_categories"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "supplier_status_changed"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "supplier_id",
+                "office",
+                "previous_status",
+                "new_status",
+                "supplier_categories"
+              ],
+              "properties": {
+                "supplier_id": {
+                  "type": "string",
+                  "description": "ID interno del proveedor.",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "office": {
+                  "type": "string",
+                  "description": "Oficina del contrato.",
+                  "enum": [
+                    "valencia",
+                    "miami"
+                  ]
+                },
+                "previous_status": {
+                  "type": "string",
+                  "description": "Estado anterior.",
+                  "enum": [
+                    "active",
+                    "suspended"
+                  ]
+                },
+                "new_status": {
+                  "type": "string",
+                  "description": "Estado nuevo.",
+                  "enum": [
+                    "active",
+                    "suspended"
+                  ]
+                },
+                "supplier_categories": {
+                  "type": "array",
+                  "description": "Categorías de servicio del proveedor.",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "job_boards",
+                      "ats_software",
+                      "assessment_tools",
+                      "training_platforms",
+                      "payroll_and_hr_software",
+                      "video_interview",
+                      "background_check",
+                      "office_and_facilities",
+                      "it_and_software_licenses"
+                    ]
+                  },
+                  "minItems": 1
+                }
+              }
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "supplier_status_changed",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "supplier_id": "12",
+            "office": "miami",
+            "previous_status": "active",
+            "new_status": "suspended",
+            "supplier_categories": [
+              "training_platforms"
+            ]
+          }
+        }
+      ]
+    },
+    "login_succeeded": {
+      "title": "login_succeeded",
+      "description": "Inicio de sesión correcto en el backoffice.",
+      "x-origin": "identified",
+      "x-category": "auth",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "`POST /auth/login` → 200, al emitir el token.",
+      "x-rationale": "Capturamos login_succeeded porque necesitamos saber cuántas personas usan realmente el backoffice, con qué rol y en qué horario, lo que nos permite dimensionar capacitación y soporte, y detectar cuentas que nunca entran (candidatas a desactivar).",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "Son métricas de adopción y su revisión es mensual."
+      },
+      "x-pii": "Ninguna. El email **nunca** se emite: el usuario se identifica por `userId` en el envelope.",
+      "x-throttle": null,
+      "x-allowlist": [
+        "user_role",
+        "auth_method"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "login_succeeded"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "user_role",
+                "auth_method"
+              ],
+              "properties": {
+                "user_role": {
+                  "type": "string",
+                  "description": "Rol del usuario.",
+                  "enum": [
+                    "admin",
+                    "recruiter",
+                    "client",
+                    "candidate",
+                    "user"
+                  ]
+                },
+                "auth_method": {
+                  "type": "string",
+                  "description": "Método.",
+                  "enum": [
+                    "password"
+                  ]
+                }
+              }
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "login_succeeded",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "user_role": "recruiter",
+            "auth_method": "password"
+          }
+        }
+      ]
+    },
+    "login_failed": {
+      "title": "login_failed",
+      "description": "Intento de inicio de sesión fallido.",
+      "x-origin": "identified",
+      "x-category": "auth",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "`POST /auth/login` → 401/403/422. `userId` = null aunque la cuenta exista (no se revela qué cuentas existen).",
+      "x-rationale": "Capturamos login_failed porque necesitamos saber cuántos intentos fallidos hay por día y si hay ataques de fuerza bruta contra cuentas concretas (pregunta del tech lead), lo que nos permite bloquear temporalmente una cuenta o IP, exigir MFA, o ayudar a usuarios que fallan repetidamente.",
+      "x-delivery": {
+        "mode": "stream",
+        "cadence": "≤ 1 min, alerta si ≥ 10 fallos del mismo account_key_hash o client_ip_hash en 15 min",
+        "justification": "Un ataque de fuerza bruta se gana o se pierde en minutos: un lote diario llega tarde para bloquear."
+      },
+      "x-pii": "**Contiene PII seudonimizada.** El email y la IP son datos personales (RGPD aplica en Valencia). Nunca se emiten en claro: el email va como HMAC con *pepper* en el gestor de secretos (no reversible sin él) y la IP como HMAC con sal **diaria rotada**, que se destruye a las 48 h. Retención: 90 días.",
+      "x-throttle": "Máximo 60 eventos/min por `client_ip_hash`; el excedente se cuenta y se informa en `suppressed_count` del siguiente evento.",
+      "x-allowlist": [
+        "failure_reason",
+        "account_key_hash",
+        "client_ip_hash",
+        "suppressed_count"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "login_failed"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "failure_reason",
+                "account_key_hash",
+                "client_ip_hash"
+              ],
+              "properties": {
+                "failure_reason": {
+                  "type": "string",
+                  "description": "Motivo.",
+                  "enum": [
+                    "invalid_credentials",
+                    "inactive_user",
+                    "malformed_request",
+                    "rate_limited"
+                  ]
+                },
+                "account_key_hash": {
+                  "type": "string",
+                  "description": "HMAC-SHA256(email normalizado, pepper secreto) truncado a 16 hex. Permite contar fallos por cuenta sin guardar el email.",
+                  "pattern": "^[0-9a-f]{16}$"
+                },
+                "client_ip_hash": {
+                  "type": "string",
+                  "description": "HMAC-SHA256(IP, sal diaria rotada) truncado a 16 hex. Correlaciona dentro del día, no entre días.",
+                  "pattern": "^[0-9a-f]{16}$"
+                },
+                "suppressed_count": {
+                  "type": "integer",
+                  "description": "Fallos omitidos por el throttle desde el último evento emitido para este client_ip_hash.",
+                  "minimum": 1
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": null,
+          "userId": null,
+          "event_type": "login_failed",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "failure_reason": "invalid_credentials",
+            "account_key_hash": "a3f1c9e07b2d4e51",
+            "client_ip_hash": "0c9d8e7f6a5b4c3d"
+          }
+        }
+      ]
+    },
+    "session_expired": {
+      "title": "session_expired",
+      "description": "La sesión del usuario caducó (401) mientras usaba el backoffice.",
+      "x-origin": "identified",
+      "x-category": "auth",
+      "x-source": [
+        "frontend_backoffice"
+      ],
+      "x-trigger": "Hoy `expireSession()` en `uis/backoffice/src/lib/auth.ts` (lo llama `request()` ante un 401 o falta de token). Se emite antes de borrar el token, con el userId en memoria.",
+      "x-rationale": "Capturamos session_expired porque necesitamos saber si la caducidad del token (30 min) interrumpe trabajo real, por ejemplo con un formulario a medio completar, lo que nos permite ajustar `ACCESS_TOKEN_EXPIRE_MINUTES` o implementar refresh token.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "Calibrar la duración del token es una decisión de configuración que se revisa con datos de semanas."
+      },
+      "x-pii": "Ninguna.",
+      "x-throttle": null,
+      "x-allowlist": [
+        "route",
+        "trigger",
+        "session_age_minutes",
+        "had_unsaved_form"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "session_expired"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "frontend_backoffice"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "route",
+                "trigger",
+                "session_age_minutes",
+                "had_unsaved_form"
+              ],
+              "properties": {
+                "route": {
+                  "type": "string",
+                  "description": "Plantilla de ruta del frontend (sin IDs ni query string).",
+                  "enum": [
+                    "/",
+                    "/login",
+                    "/register",
+                    "/account/profile",
+                    "/backoffice/inventory/products",
+                    "/backoffice/inventory/orders",
+                    "/backoffice/inventory/orders/inbound",
+                    "/backoffice/inventory/orders/outbound",
+                    "/backoffice/suppliers",
+                    "website:/"
+                  ]
+                },
+                "trigger": {
+                  "type": "string",
+                  "description": "Origen.",
+                  "enum": [
+                    "api_401",
+                    "token_missing"
+                  ]
+                },
+                "session_age_minutes": {
+                  "type": "integer",
+                  "description": "Minutos desde el login.",
+                  "minimum": 0
+                },
+                "had_unsaved_form": {
+                  "type": "boolean",
+                  "description": "Si había un formulario con cambios sin enviar."
+                }
+              }
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "session_expired",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "frontend_backoffice",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "route": "/backoffice/inventory/orders/outbound",
+            "trigger": "api_401",
+            "session_age_minutes": 31,
+            "had_unsaved_form": true
+          }
+        }
+      ]
+    },
+    "user_logged_out": {
+      "title": "user_logged_out",
+      "description": "El usuario cerró sesión voluntariamente.",
+      "x-origin": "identified",
+      "x-category": "auth",
+      "x-source": [
+        "frontend_backoffice"
+      ],
+      "x-trigger": "Botón *Cerrar sesión* (hoy `handleLogout` en `uis/backoffice/src/app/page.tsx`), antes de `logout()`.",
+      "x-rationale": "Capturamos user_logged_out porque necesitamos saber cuánto duran las sesiones reales de trabajo (junto con `session_expired`), lo que nos permite fijar la duración del token según el uso real y no por defecto.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "Alimenta la misma decisión de configuración que `session_expired`."
+      },
+      "x-pii": "Ninguna.",
+      "x-throttle": null,
+      "x-allowlist": [
+        "session_duration_minutes"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "user_logged_out"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "frontend_backoffice"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "session_duration_minutes"
+              ],
+              "properties": {
+                "session_duration_minutes": {
+                  "type": "integer",
+                  "description": "Minutos desde el login.",
+                  "minimum": 0
+                }
+              }
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "user_logged_out",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "frontend_backoffice",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "session_duration_minutes": 142
+          }
+        }
+      ]
+    },
+    "user_registered": {
+      "title": "user_registered",
+      "description": "Se creó una cuenta nueva (`POST /users` → 201).",
+      "x-origin": "identified",
+      "x-category": "auth",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "Tras crear el usuario y su perfil. `userId` = UUID de la cuenta nueva y `sessionId` = el de la sesión anónima que la creó.",
+      "x-rationale": "Capturamos user_registered porque necesitamos saber si el registro abierto está creando cuentas que nadie esperaba (hoy cualquiera puede registrarse), lo que nos permite cerrar el autoregistro y pasar a invitación o aprobación de RRHH (Patricia).",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "Las altas son pocas y la decisión es de política."
+      },
+      "x-pii": "El email no se emite. Sólo una clasificación binaria del dominio, que no identifica a nadie.",
+      "x-throttle": null,
+      "x-allowlist": [
+        "user_role",
+        "email_domain_class"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "user_registered"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "user_role",
+                "email_domain_class"
+              ],
+              "properties": {
+                "user_role": {
+                  "type": "string",
+                  "description": "Rol asignado al crear.",
+                  "enum": [
+                    "admin",
+                    "recruiter",
+                    "client",
+                    "candidate",
+                    "user"
+                  ]
+                },
+                "email_domain_class": {
+                  "type": "string",
+                  "description": "Si el dominio del email es corporativo de Nexova o externo. Nunca el dominio en sí.",
+                  "enum": [
+                    "corporate",
+                    "external"
+                  ]
+                }
+              }
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "user_registered",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "user_role": "user",
+            "email_domain_class": "external"
+          }
+        }
+      ]
+    },
+    "access_denied": {
+      "title": "access_denied",
+      "description": "Un usuario autenticado pidió un recurso para el que no tiene permiso (403).",
+      "x-origin": "identified",
+      "x-category": "auth",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "Cualquier `HTTPException(403)` (hoy, por ejemplo, `GET /users/{user_id}` de otro usuario sin rol admin).",
+      "x-rationale": "Capturamos access_denied porque necesitamos saber si hay usuarios explorando recursos ajenos o si los permisos están mal definidos para tareas legítimas, lo que nos permite corregir roles y permisos, o investigar una cuenta concreta.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "El acceso ya fue bloqueado, así que no hay daño en curso. La revisión es periódica. Lo que no se bloquea (saltarse la trazabilidad) va por stream en `direct_stock_edit_rejected`."
+      },
+      "x-pii": "Ninguna. El ID del recurso pedido no se emite (podría ser el UUID de otra persona); sólo la plantilla de ruta.",
+      "x-throttle": null,
+      "x-allowlist": [
+        "endpoint",
+        "http_method",
+        "user_role"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "access_denied"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "endpoint",
+                "http_method",
+                "user_role"
+              ],
+              "properties": {
+                "endpoint": {
+                  "type": "string",
+                  "description": "Plantilla de ruta del API (sin IDs reales ni query string).",
+                  "enum": [
+                    "/",
+                    "/health",
+                    "/auth/login",
+                    "/auth/me",
+                    "/users",
+                    "/users/{user_id}",
+                    "/profiles/me",
+                    "/inventory/products",
+                    "/inventory/products/{product_id}",
+                    "/inventory/products/{product_id}/stock",
+                    "/inventory/orders",
+                    "/inventory/orders/inbound",
+                    "/inventory/orders/outbound",
+                    "/suppliers",
+                    "/suppliers/{supplier_id}",
+                    "/suppliers/{supplier_id}/rate",
+                    "/suppliers/{supplier_id}/status",
+                    "/candidates",
+                    "/clients",
+                    "/vacancies",
+                    "/interviews",
+                    "/evaluations"
+                  ]
+                },
+                "http_method": {
+                  "type": "string",
+                  "description": "Método.",
+                  "enum": [
+                    "GET",
+                    "POST",
+                    "PUT",
+                    "PATCH",
+                    "DELETE"
+                  ]
+                },
+                "user_role": {
+                  "type": "string",
+                  "description": "Rol del usuario.",
+                  "enum": [
+                    "admin",
+                    "recruiter",
+                    "client",
+                    "candidate",
+                    "user"
+                  ]
+                }
+              }
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "access_denied",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "endpoint": "/users/{user_id}",
+            "http_method": "GET",
+            "user_role": "user"
+          }
+        }
+      ]
+    },
+    "api_latency_recorded": {
+      "title": "api_latency_recorded",
+      "description": "Agregado de latencia por ruta en una ventana de 60 s (no un evento por petición).",
+      "x-origin": "identified",
+      "x-category": "performance",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "El middleware de timing (hoy `timing_middleware` en `services/api/src/api/main.py`) acumula en memoria por (ruta, método, clase de status) y emite un evento por combinación al cerrar cada ventana de 60 s. Se excluyen `/health` y `/`. `userId`/`sessionId` = null; `requestId` = id de la ventana.",
+      "x-rationale": "Capturamos api_latency_recorded porque necesitamos saber qué endpoints se degradan y cuándo, y si la caché mantiene su tasa de aciertos, lo que nos permite actuar ante una degradación (rollback, escalar, índice) y decidir qué más cachear u optimizar.",
+      "x-delivery": {
+        "mode": "stream",
+        "cadence": "≤ 1 min, alerta si p95 > 500 ms en 3 ventanas seguidas",
+        "justification": "Una degradación afecta a todos los usuarios mientras dura: hay que detectarla en minutos. Agregar por minuto mantiene el volumen bajo."
+      },
+      "x-pii": "Ninguna (agregado, sin usuario).",
+      "x-throttle": "Agregación en ventana fija de 60 s: como máximo un evento por (ruta, método, clase) y minuto, sea cual sea el tráfico.",
+      "x-allowlist": [
+        "endpoint",
+        "http_method",
+        "status_class",
+        "window_start",
+        "window_seconds",
+        "request_count",
+        "p50_ms",
+        "p95_ms",
+        "max_ms",
+        "cache_hit_count",
+        "cache_miss_count"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "api_latency_recorded"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "endpoint",
+                "http_method",
+                "status_class",
+                "window_start",
+                "window_seconds",
+                "request_count",
+                "p50_ms",
+                "p95_ms",
+                "max_ms"
+              ],
+              "properties": {
+                "endpoint": {
+                  "type": "string",
+                  "description": "Plantilla de ruta del API (sin IDs reales ni query string).",
+                  "enum": [
+                    "/",
+                    "/health",
+                    "/auth/login",
+                    "/auth/me",
+                    "/users",
+                    "/users/{user_id}",
+                    "/profiles/me",
+                    "/inventory/products",
+                    "/inventory/products/{product_id}",
+                    "/inventory/products/{product_id}/stock",
+                    "/inventory/orders",
+                    "/inventory/orders/inbound",
+                    "/inventory/orders/outbound",
+                    "/suppliers",
+                    "/suppliers/{supplier_id}",
+                    "/suppliers/{supplier_id}/rate",
+                    "/suppliers/{supplier_id}/status",
+                    "/candidates",
+                    "/clients",
+                    "/vacancies",
+                    "/interviews",
+                    "/evaluations"
+                  ]
+                },
+                "http_method": {
+                  "type": "string",
+                  "description": "Método.",
+                  "enum": [
+                    "GET",
+                    "POST",
+                    "PUT",
+                    "PATCH",
+                    "DELETE"
+                  ]
+                },
+                "status_class": {
+                  "type": "string",
+                  "description": "Clase de status.",
+                  "enum": [
+                    "2xx",
+                    "3xx",
+                    "4xx",
+                    "5xx"
+                  ]
+                },
+                "window_start": {
+                  "type": "string",
+                  "description": "Inicio de la ventana (ISO 8601 UTC).",
+                  "format": "date-time"
+                },
+                "window_seconds": {
+                  "type": "integer",
+                  "description": "Duración de la ventana.",
+                  "enum": [
+                    60
+                  ]
+                },
+                "request_count": {
+                  "type": "integer",
+                  "description": "Peticiones en la ventana.",
+                  "minimum": 1
+                },
+                "p50_ms": {
+                  "type": "integer",
+                  "description": "Percentil 50 En milisegundos.",
+                  "minimum": 0
+                },
+                "p95_ms": {
+                  "type": "integer",
+                  "description": "Percentil 95 En milisegundos.",
+                  "minimum": 0
+                },
+                "max_ms": {
+                  "type": "integer",
+                  "description": "Máximo En milisegundos.",
+                  "minimum": 0
+                },
+                "cache_hit_count": {
+                  "type": "integer",
+                  "description": "Respuestas con `X-Cache: HIT`.",
+                  "minimum": 0
+                },
+                "cache_miss_count": {
+                  "type": "integer",
+                  "description": "Respuestas con `X-Cache: MISS`.",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": null,
+          "userId": null,
+          "event_type": "api_latency_recorded",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "endpoint": "/inventory/products",
+            "http_method": "GET",
+            "status_class": "2xx",
+            "window_start": "2026-11-15T10:42:00.000Z",
+            "window_seconds": 60,
+            "request_count": 37,
+            "p50_ms": 1,
+            "p95_ms": 98,
+            "max_ms": 121,
+            "cache_hit_count": 34,
+            "cache_miss_count": 3
+          }
+        }
+      ]
+    },
+    "page_load_recorded": {
+      "title": "page_load_recorded",
+      "description": "Métricas de carga real (Core Web Vitals) de una vista del backoffice o del website.",
+      "x-origin": "identified",
+      "x-category": "performance",
+      "x-source": [
+        "frontend_backoffice",
+        "frontend_website"
+      ],
+      "x-trigger": "Con `useReportWebVitals` de Next.js: un evento por carga completa, emitido en `pagehide` (cuando INP y CLS ya son definitivos). En el website, sólo con consentimiento de analítica.",
+      "x-rationale": "Capturamos page_load_recorded porque necesitamos saber cómo perciben la velocidad los usuarios reales y si un despliegue empeoró la carga, lo que nos permite priorizar optimizaciones (lazy loading, caché) en las vistas más lentas y bloquear releases que empeoren LCP o INP.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "Las decisiones de performance se toman por release. Lo urgente (API caída o lenta) ya lo detecta `api_latency_recorded` por stream."
+      },
+      "x-pii": "El user-agent completo **no** se emite (permite *fingerprinting*); sólo `device_class`.",
+      "x-throttle": "Muestreo: 100 % en el backoffice (pocos usuarios) y 25 % de las sesiones en el website. La decisión de muestreo se toma una vez por sesión.",
+      "x-allowlist": [
+        "route",
+        "lcp_ms",
+        "inp_ms",
+        "ttfb_ms",
+        "cls",
+        "device_class",
+        "navigation_type"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "page_load_recorded"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "frontend_backoffice",
+                    "frontend_website"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "route",
+                "lcp_ms",
+                "ttfb_ms",
+                "cls",
+                "device_class",
+                "navigation_type"
+              ],
+              "properties": {
+                "route": {
+                  "type": "string",
+                  "description": "Plantilla de ruta del frontend (sin IDs ni query string).",
+                  "enum": [
+                    "/",
+                    "/login",
+                    "/register",
+                    "/account/profile",
+                    "/backoffice/inventory/products",
+                    "/backoffice/inventory/orders",
+                    "/backoffice/inventory/orders/inbound",
+                    "/backoffice/inventory/orders/outbound",
+                    "/backoffice/suppliers",
+                    "website:/"
+                  ]
+                },
+                "lcp_ms": {
+                  "type": "integer",
+                  "description": "Largest Contentful Paint En milisegundos.",
+                  "minimum": 0
+                },
+                "inp_ms": {
+                  "type": "integer",
+                  "description": "Interaction to Next Paint En milisegundos.",
+                  "minimum": 0
+                },
+                "ttfb_ms": {
+                  "type": "integer",
+                  "description": "Time To First Byte En milisegundos.",
+                  "minimum": 0
+                },
+                "cls": {
+                  "type": "number",
+                  "description": "Cumulative Layout Shift (sin unidad).",
+                  "minimum": 0
+                },
+                "device_class": {
+                  "type": "string",
+                  "description": "Clase por ancho de viewport.",
+                  "enum": [
+                    "mobile",
+                    "tablet",
+                    "desktop"
+                  ]
+                },
+                "navigation_type": {
+                  "type": "string",
+                  "description": "Tipo de navegación.",
+                  "enum": [
+                    "navigate",
+                    "reload",
+                    "back_forward",
+                    "client_route"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": null,
+          "event_type": "page_load_recorded",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "frontend_backoffice",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "route": "/backoffice/inventory/orders",
+            "lcp_ms": 920,
+            "inp_ms": 64,
+            "ttfb_ms": 85,
+            "cls": 0.01,
+            "device_class": "desktop",
+            "navigation_type": "client_route"
+          }
+        }
+      ]
+    },
+    "db_query_slow_detected": {
+      "title": "db_query_slow_detected",
+      "description": "Una consulta SQL superó 200 ms.",
+      "x-origin": "identified",
+      "x-category": "performance",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "Listener `after_cursor_execute` de SQLAlchemy sobre el engine de inventario: si la duración supera 200 ms, emite la consulta normalizada (sin parámetros).",
+      "x-rationale": "Capturamos db_query_slow_detected porque necesitamos saber qué consultas concretas explican la latencia del API (ej. el N+1 de stock detectado en la auditoría de caching), lo que nos permite crear índices, reescribir la consulta o cachear el endpoint que la usa.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "horario",
+        "justification": "Lo urgente lo dispara `api_latency_recorded`; esto sirve para diagnosticar la causa después."
+      },
+      "x-pii": "Riesgo: el SQL con parámetros podría contener datos. Sólo se emite la huella de la consulta **normalizada**; el texto normalizado se guarda aparte en un catálogo interno de huellas.",
+      "x-throttle": "Máximo 1 evento por `query_fingerprint` cada 60 s (el resto se cuenta en logs, no en telemetría).",
+      "x-allowlist": [
+        "query_fingerprint",
+        "statement_kind",
+        "main_table",
+        "duration_ms",
+        "endpoint"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "db_query_slow_detected"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "query_fingerprint",
+                "statement_kind",
+                "main_table",
+                "duration_ms"
+              ],
+              "properties": {
+                "query_fingerprint": {
+                  "type": "string",
+                  "description": "SHA-256 (16 hex) de la consulta normalizada (literales sustituidos por `?`).",
+                  "pattern": "^[0-9a-f]{16}$"
+                },
+                "statement_kind": {
+                  "type": "string",
+                  "description": "Tipo.",
+                  "enum": [
+                    "select",
+                    "insert",
+                    "update",
+                    "delete",
+                    "other"
+                  ]
+                },
+                "main_table": {
+                  "type": "string",
+                  "description": "Tabla principal.",
+                  "enum": [
+                    "products",
+                    "inbound_orders",
+                    "outbound_orders",
+                    "other"
+                  ]
+                },
+                "duration_ms": {
+                  "type": "integer",
+                  "description": "Duración En milisegundos.",
+                  "minimum": 0
+                },
+                "endpoint": {
+                  "type": "string",
+                  "description": "Plantilla de ruta del API (sin IDs reales ni query string).",
+                  "enum": [
+                    "/",
+                    "/health",
+                    "/auth/login",
+                    "/auth/me",
+                    "/users",
+                    "/users/{user_id}",
+                    "/profiles/me",
+                    "/inventory/products",
+                    "/inventory/products/{product_id}",
+                    "/inventory/products/{product_id}/stock",
+                    "/inventory/orders",
+                    "/inventory/orders/inbound",
+                    "/inventory/orders/outbound",
+                    "/suppliers",
+                    "/suppliers/{supplier_id}",
+                    "/suppliers/{supplier_id}/rate",
+                    "/suppliers/{supplier_id}/status",
+                    "/candidates",
+                    "/clients",
+                    "/vacancies",
+                    "/interviews",
+                    "/evaluations"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": null,
+          "userId": null,
+          "event_type": "db_query_slow_detected",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "query_fingerprint": "5e1f0a9b8c7d6e5f",
+            "statement_kind": "select",
+            "main_table": "outbound_orders",
+            "duration_ms": 412,
+            "endpoint": "/inventory/orders"
+          }
+        }
+      ]
+    },
+    "api_error_returned": {
+      "title": "api_error_returned",
+      "description": "El API devolvió un 5xx (excepción no controlada).",
+      "x-origin": "identified",
+      "x-category": "errors",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "`global_exception_handler` en `services/api/src/api/main.py` (hoy devuelve 500 genérico). `userId` se incluye si la petición estaba autenticada.",
+      "x-rationale": "Capturamos api_error_returned porque necesitamos saber qué fallos reales de servidor sufren los usuarios y desde qué despliegue, lo que nos permite hacer rollback o hotfix y priorizar los fallos más frecuentes.",
+      "x-delivery": {
+        "mode": "stream",
+        "cadence": "≤ 1 min, alerta si un error_fingerprint nuevo aparece o si hay > 5 en 5 min",
+        "justification": "Un 5xx es una funcionalidad rota en producción: cada minuto cuenta."
+      },
+      "x-pii": "Riesgo: el mensaje de la excepción puede incluir datos del request. **No se emite el mensaje ni el stack**, sólo la clase y una huella. El stack completo queda en los logs del servidor, enlazado por `requestId`.",
+      "x-throttle": "Por `error_fingerprint`: un evento inmediato y luego, como máximo, uno cada 10 s con `occurrence_count`.",
+      "x-allowlist": [
+        "endpoint",
+        "http_method",
+        "http_status",
+        "error_class",
+        "error_fingerprint",
+        "occurrence_count"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "api_error_returned"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "endpoint",
+                "http_method",
+                "http_status",
+                "error_class",
+                "error_fingerprint",
+                "occurrence_count"
+              ],
+              "properties": {
+                "endpoint": {
+                  "type": "string",
+                  "description": "Plantilla de ruta del API (sin IDs reales ni query string).",
+                  "enum": [
+                    "/",
+                    "/health",
+                    "/auth/login",
+                    "/auth/me",
+                    "/users",
+                    "/users/{user_id}",
+                    "/profiles/me",
+                    "/inventory/products",
+                    "/inventory/products/{product_id}",
+                    "/inventory/products/{product_id}/stock",
+                    "/inventory/orders",
+                    "/inventory/orders/inbound",
+                    "/inventory/orders/outbound",
+                    "/suppliers",
+                    "/suppliers/{supplier_id}",
+                    "/suppliers/{supplier_id}/rate",
+                    "/suppliers/{supplier_id}/status",
+                    "/candidates",
+                    "/clients",
+                    "/vacancies",
+                    "/interviews",
+                    "/evaluations"
+                  ]
+                },
+                "http_method": {
+                  "type": "string",
+                  "description": "Método.",
+                  "enum": [
+                    "GET",
+                    "POST",
+                    "PUT",
+                    "PATCH",
+                    "DELETE"
+                  ]
+                },
+                "http_status": {
+                  "type": "integer",
+                  "description": "Status.",
+                  "minimum": 500,
+                  "maximum": 599
+                },
+                "error_class": {
+                  "type": "string",
+                  "description": "Nombre de la clase de excepción (ej. `OperationalError`).",
+                  "pattern": "^[A-Za-z_][A-Za-z0-9_.]{0,80}$"
+                },
+                "error_fingerprint": {
+                  "type": "string",
+                  "description": "SHA-256 (16 hex) de clase + primer frame propio del stack.",
+                  "pattern": "^[0-9a-f]{16}$"
+                },
+                "occurrence_count": {
+                  "type": "integer",
+                  "description": "Ocurrencias agregadas en la ventana de throttle (1 si no hubo agregación).",
+                  "minimum": 1
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": null,
+          "userId": null,
+          "event_type": "api_error_returned",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "endpoint": "/inventory/orders/outbound",
+            "http_method": "POST",
+            "http_status": 500,
+            "error_class": "OperationalError",
+            "error_fingerprint": "9c8b7a6f5e4d3c2b",
+            "occurrence_count": 1
+          }
+        }
+      ]
+    },
+    "frontend_error_captured": {
+      "title": "frontend_error_captured",
+      "description": "Error de JavaScript no controlado en el navegador.",
+      "x-origin": "identified",
+      "x-category": "errors",
+      "x-source": [
+        "frontend_backoffice",
+        "frontend_website"
+      ],
+      "x-trigger": "`window.onerror`, `unhandledrejection` y un Error Boundary (`error.tsx` del App Router) en backoffice y website.",
+      "x-rationale": "Capturamos frontend_error_captured porque necesitamos saber si hay vistas rotas en el navegador que el backend nunca ve, lo que nos permite hotfix o rollback del frontend y priorizar los errores por número de sesiones afectadas.",
+      "x-delivery": {
+        "mode": "stream",
+        "cadence": "≤ 1 min, alerta si un fingerprint nuevo afecta a ≥ 3 sesiones en 10 min",
+        "justification": "Un error que rompe el formulario de órdenes impide registrar entregas, y el backend no lo ve."
+      },
+      "x-pii": "Riesgo: el mensaje de error puede contener datos de la pantalla. Se sanitiza (regex de email, UUID y números) y se trunca **antes** de salir del navegador. No se envía el stack con URLs completas.",
+      "x-throttle": "Por sesión: un evento por `error_fingerprint` cada 60 s y un máximo de 20 errores por sesión (protege contra bucles de render).",
+      "x-allowlist": [
+        "route",
+        "error_source",
+        "error_name",
+        "message_sanitized",
+        "error_fingerprint",
+        "app_area"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "frontend_error_captured"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "frontend_backoffice",
+                    "frontend_website"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "route",
+                "error_source",
+                "error_name",
+                "message_sanitized",
+                "error_fingerprint",
+                "app_area"
+              ],
+              "properties": {
+                "route": {
+                  "type": "string",
+                  "description": "Plantilla de ruta del frontend (sin IDs ni query string).",
+                  "enum": [
+                    "/",
+                    "/login",
+                    "/register",
+                    "/account/profile",
+                    "/backoffice/inventory/products",
+                    "/backoffice/inventory/orders",
+                    "/backoffice/inventory/orders/inbound",
+                    "/backoffice/inventory/orders/outbound",
+                    "/backoffice/suppliers",
+                    "website:/"
+                  ]
+                },
+                "error_source": {
+                  "type": "string",
+                  "description": "Captura.",
+                  "enum": [
+                    "window_error",
+                    "unhandled_rejection",
+                    "error_boundary"
+                  ]
+                },
+                "error_name": {
+                  "type": "string",
+                  "description": "Nombre (ej. `TypeError`).",
+                  "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,60}$"
+                },
+                "message_sanitized": {
+                  "type": "string",
+                  "description": "Mensaje truncado a 200 caracteres con emails, UUIDs y números reemplazados por `<email>`, `<uuid>` y `<n>`.",
+                  "maxLength": 200
+                },
+                "error_fingerprint": {
+                  "type": "string",
+                  "description": "SHA-256 (16 hex) de error_name + primer frame de la app.",
+                  "pattern": "^[0-9a-f]{16}$"
+                },
+                "app_area": {
+                  "type": "string",
+                  "description": "Aplicación.",
+                  "enum": [
+                    "backoffice",
+                    "website"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": null,
+          "event_type": "frontend_error_captured",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "frontend_backoffice",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "route": "/backoffice/inventory/orders/outbound",
+            "error_source": "error_boundary",
+            "error_name": "TypeError",
+            "message_sanitized": "Cannot read properties of null (reading 'current_stock')",
+            "error_fingerprint": "1a2b3c4d5e6f7a8b",
+            "app_area": "backoffice"
+          }
+        }
+      ]
+    },
+    "api_request_failed": {
+      "title": "api_request_failed",
+      "description": "Una llamada del frontend al API falló desde el punto de vista del usuario (red, timeout o error HTTP inesperado).",
+      "x-origin": "identified",
+      "x-category": "errors",
+      "x-source": [
+        "frontend_backoffice"
+      ],
+      "x-trigger": "`request()` en `uis/backoffice/src/lib/api.ts`: excepción de `fetch` (red), timeout o status ≥ 500. Se excluyen los aborts intencionales (`AbortController`), los 401 (→ `session_expired`) y los 4xx de validación (→ `order_validation_failed`).",
+      "x-rationale": "Capturamos api_request_failed porque necesitamos saber cuántos fallos ven los usuarios que el backend no registra (proxy, red, CORS, despliegue a medias), lo que nos permite investigar infraestructura (proxy de Next, CORS, DNS) cuando la tasa de fallos del cliente diverge de la del servidor.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "horario",
+        "justification": "Los 5xx del servidor ya van por stream en `api_error_returned`. Esto es la diferencia entre lo que ve el cliente y lo que ve el servidor, y basta revisarla cada hora."
+      },
+      "x-pii": "Ninguna (sólo plantillas de ruta).",
+      "x-throttle": null,
+      "x-allowlist": [
+        "endpoint",
+        "http_method",
+        "failure_kind",
+        "http_status",
+        "duration_ms",
+        "page_route"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "api_request_failed"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "frontend_backoffice"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "endpoint",
+                "http_method",
+                "failure_kind",
+                "duration_ms",
+                "page_route"
+              ],
+              "properties": {
+                "endpoint": {
+                  "type": "string",
+                  "description": "Plantilla de ruta del API (sin IDs reales ni query string).",
+                  "enum": [
+                    "/",
+                    "/health",
+                    "/auth/login",
+                    "/auth/me",
+                    "/users",
+                    "/users/{user_id}",
+                    "/profiles/me",
+                    "/inventory/products",
+                    "/inventory/products/{product_id}",
+                    "/inventory/products/{product_id}/stock",
+                    "/inventory/orders",
+                    "/inventory/orders/inbound",
+                    "/inventory/orders/outbound",
+                    "/suppliers",
+                    "/suppliers/{supplier_id}",
+                    "/suppliers/{supplier_id}/rate",
+                    "/suppliers/{supplier_id}/status",
+                    "/candidates",
+                    "/clients",
+                    "/vacancies",
+                    "/interviews",
+                    "/evaluations"
+                  ]
+                },
+                "http_method": {
+                  "type": "string",
+                  "description": "Método.",
+                  "enum": [
+                    "GET",
+                    "POST",
+                    "PUT",
+                    "PATCH",
+                    "DELETE"
+                  ]
+                },
+                "failure_kind": {
+                  "type": "string",
+                  "description": "Tipo de fallo.",
+                  "enum": [
+                    "network_error",
+                    "timeout",
+                    "http_5xx"
+                  ]
+                },
+                "http_status": {
+                  "type": "integer",
+                  "description": "Status (sólo si failure_kind=http_5xx).",
+                  "minimum": 500,
+                  "maximum": 599
+                },
+                "duration_ms": {
+                  "type": "integer",
+                  "description": "Tiempo hasta el fallo En milisegundos.",
+                  "minimum": 0
+                },
+                "page_route": {
+                  "type": "string",
+                  "description": "Vista desde la que se hizo la llamada.",
+                  "enum": [
+                    "/",
+                    "/login",
+                    "/register",
+                    "/account/profile",
+                    "/backoffice/inventory/products",
+                    "/backoffice/inventory/orders",
+                    "/backoffice/inventory/orders/inbound",
+                    "/backoffice/inventory/orders/outbound",
+                    "/backoffice/suppliers",
+                    "website:/"
+                  ]
+                }
+              }
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "api_request_failed",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "frontend_backoffice",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "endpoint": "/inventory/orders",
+            "http_method": "GET",
+            "failure_kind": "timeout",
+            "duration_ms": 30000,
+            "page_route": "/backoffice/inventory/orders"
+          }
+        }
+      ]
+    },
+    "page_viewed": {
+      "title": "page_viewed",
+      "description": "Se mostró una vista del backoffice o del website.",
+      "x-origin": "identified",
+      "x-category": "navigation",
+      "x-source": [
+        "frontend_backoffice",
+        "frontend_website"
+      ],
+      "x-trigger": "Componente cliente en el layout raíz que observa `usePathname()` y emite en cada cambio de ruta (incluida la carga inicial). La ruta se normaliza a su plantilla y la query string se descarta.",
+      "x-rationale": "Capturamos page_viewed porque necesitamos saber qué secciones usan más los operadores y por qué caminos llegan (pregunta del tech lead), lo que nos permite priorizar el desarrollo de las secciones más usadas y simplificar o retirar las que nadie visita.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "Son patrones de uso que se analizan por semana."
+      },
+      "x-pii": "La query string y los IDs de la URL no se emiten. El referrer externo tampoco (podría incluir parámetros de campañas o de búsqueda). En el website se emite sólo con consentimiento de analítica (RGPD/ePrivacy).",
+      "x-throttle": "Deduplicación: se ignora una segunda vista de la misma ruta dentro de 2 s (doble render en desarrollo, *replace* de rutas).",
+      "x-allowlist": [
+        "route",
+        "referrer_route",
+        "app_area",
+        "ui_locale",
+        "device_class"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "page_viewed"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "frontend_backoffice",
+                    "frontend_website"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "route",
+                "app_area",
+                "ui_locale",
+                "device_class"
+              ],
+              "properties": {
+                "route": {
+                  "type": "string",
+                  "description": "Plantilla de ruta del frontend (sin IDs ni query string).",
+                  "enum": [
+                    "/",
+                    "/login",
+                    "/register",
+                    "/account/profile",
+                    "/backoffice/inventory/products",
+                    "/backoffice/inventory/orders",
+                    "/backoffice/inventory/orders/inbound",
+                    "/backoffice/inventory/orders/outbound",
+                    "/backoffice/suppliers",
+                    "website:/"
+                  ]
+                },
+                "referrer_route": {
+                  "type": "string",
+                  "description": "Vista interna anterior (null en la primera vista de la sesión).",
+                  "enum": [
+                    "/",
+                    "/login",
+                    "/register",
+                    "/account/profile",
+                    "/backoffice/inventory/products",
+                    "/backoffice/inventory/orders",
+                    "/backoffice/inventory/orders/inbound",
+                    "/backoffice/inventory/orders/outbound",
+                    "/backoffice/suppliers",
+                    "website:/"
+                  ]
+                },
+                "app_area": {
+                  "type": "string",
+                  "description": "Aplicación.",
+                  "enum": [
+                    "backoffice",
+                    "website"
+                  ]
+                },
+                "ui_locale": {
+                  "type": "string",
+                  "description": "Idioma de la interfaz. Independiente de `office` (BRIEFING §6).",
+                  "enum": [
+                    "es",
+                    "en"
+                  ]
+                },
+                "device_class": {
+                  "type": "string",
+                  "description": "Clase por ancho de viewport.",
+                  "enum": [
+                    "mobile",
+                    "tablet",
+                    "desktop"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": null,
+          "event_type": "page_viewed",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "frontend_backoffice",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "route": "/backoffice/inventory/products",
+            "referrer_route": "/",
+            "app_area": "backoffice",
+            "ui_locale": "es",
+            "device_class": "desktop"
+          }
+        }
+      ]
+    },
+    "list_filter_applied": {
+      "title": "list_filter_applied",
+      "description": "El usuario aplicó o cambió filtros en un listado.",
+      "x-origin": "identified",
+      "x-category": "navigation",
+      "x-source": [
+        "frontend_backoffice"
+      ],
+      "x-trigger": "Cambio de los `<select>` de País o Categoría del directorio de proveedores (y, a futuro, de los filtros de inventario por oficina o programa), con debounce de 1 s.",
+      "x-rationale": "Capturamos list_filter_applied porque necesitamos saber qué filtros necesitan de verdad los operadores y con qué combinaciones, lo que nos permite decidir qué filtros añadir al inventario (oficina, programa) y qué combinaciones merecen caché o índice.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "Alimenta decisiones de producto y de caché, que se toman por sprint."
+      },
+      "x-pii": "Ninguna: sólo nombres de filtros, no los valores.",
+      "x-throttle": "Debounce de 1 s: sólo se emite el estado final tras 1 s sin cambios.",
+      "x-allowlist": [
+        "view",
+        "filter_keys",
+        "result_count"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "list_filter_applied"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "frontend_backoffice"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "view",
+                "filter_keys",
+                "result_count"
+              ],
+              "properties": {
+                "view": {
+                  "type": "string",
+                  "description": "Listado.",
+                  "enum": [
+                    "suppliers_directory",
+                    "inventory_products",
+                    "inventory_orders"
+                  ]
+                },
+                "filter_keys": {
+                  "type": "array",
+                  "description": "Filtros activos (nombres, no valores libres).",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "country",
+                      "category",
+                      "office",
+                      "programme_id",
+                      "product_category",
+                      "order_type"
+                    ]
+                  },
+                  "uniqueItems": true
+                },
+                "result_count": {
+                  "type": "integer",
+                  "description": "Resultados mostrados.",
+                  "minimum": 0
+                }
+              }
+            },
+            "userId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
+          "event_type": "list_filter_applied",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "frontend_backoffice",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "view": "suppliers_directory",
+            "filter_keys": [
+              "country",
+              "category"
+            ],
+            "result_count": 45
+          }
+        }
+      ]
+    },
+    "contact_section_viewed": {
+      "title": "contact_section_viewed",
+      "description": "Un visitante del website llegó a la sección de Contacto.",
+      "x-origin": "identified",
+      "x-category": "navigation",
+      "x-source": [
+        "frontend_website"
+      ],
+      "x-trigger": "Callback del `IntersectionObserver` que ya existe en `LazyContactForm.tsx` (lazy loading del formulario), una vez por sesión.",
+      "x-rationale": "Capturamos contact_section_viewed porque necesitamos saber qué proporción de visitantes llega hasta el formulario de contacto al final de la landing, lo que nos permite mover o duplicar la llamada a la acción más arriba si muy pocos llegan.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "Es una decisión de diseño de la landing."
+      },
+      "x-pii": "Ninguna. Sólo con consentimiento de analítica.",
+      "x-throttle": "Una vez por sesión.",
+      "x-allowlist": [
+        "entry_route",
+        "scroll_depth_pct",
+        "time_to_reach_ms"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "contact_section_viewed"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "frontend_website"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "entry_route",
+                "scroll_depth_pct",
+                "time_to_reach_ms"
+              ],
+              "properties": {
+                "entry_route": {
+                  "type": "string",
+                  "description": "Ruta de entrada.",
+                  "enum": [
+                    "website:/"
+                  ]
+                },
+                "scroll_depth_pct": {
+                  "type": "integer",
+                  "description": "Porcentaje de la página recorrido al dispararse.",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "time_to_reach_ms": {
+                  "type": "integer",
+                  "description": "Tiempo desde la carga En milisegundos.",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": null,
+          "event_type": "contact_section_viewed",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "frontend_website",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "entry_route": "website:/",
+            "scroll_depth_pct": 88,
+            "time_to_reach_ms": 23400
+          }
+        }
+      ]
+    },
+    "contact_request_submitted": {
+      "title": "contact_request_submitted",
+      "description": "Un visitante envió el formulario de contacto del website.",
+      "x-origin": "identified",
+      "x-category": "commercial",
+      "x-source": [
+        "frontend_website"
+      ],
+      "x-trigger": "`handleSubmit` de `ContactForm.tsx`, tras el envío correcto (hoy simulado; cuando exista el backend, al recibir su 2xx).",
+      "x-rationale": "Capturamos contact_request_submitted porque necesitamos saber qué servicios generan más demanda comercial y desde qué país, lo que nos permite asignar consultores comerciales y presupuesto de marketing por servicio.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "diario",
+        "justification": "La gestión del lead la hace el CRM con los datos del formulario. La telemetría mide la demanda agregada, que se revisa por semana."
+      },
+      "x-pii": "**El formulario contiene PII** (nombre, email, empresa, mensaje): nada de eso entra en la telemetría. Sólo se emiten las elecciones de los desplegables y señales booleanas o por tramos.",
+      "x-throttle": null,
+      "x-allowlist": [
+        "service_interest",
+        "form_country",
+        "has_company",
+        "message_length_bucket"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "contact_request_submitted"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "frontend_website"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "service_interest",
+                "form_country",
+                "has_company",
+                "message_length_bucket"
+              ],
+              "properties": {
+                "service_interest": {
+                  "type": "string",
+                  "description": "Servicio elegido.",
+                  "enum": [
+                    "executive-search",
+                    "rpo",
+                    "consultoria",
+                    "people-analytics",
+                    "evaluacion",
+                    "nomina",
+                    "otro",
+                    "none"
+                  ]
+                },
+                "form_country": {
+                  "type": "string",
+                  "description": "País elegido en el formulario.",
+                  "enum": [
+                    "Chile",
+                    "Argentina",
+                    "Otro"
+                  ]
+                },
+                "has_company": {
+                  "type": "boolean",
+                  "description": "Si completó el campo Empresa (no su valor)."
+                },
+                "message_length_bucket": {
+                  "type": "string",
+                  "description": "Tramo de longitud del mensaje.",
+                  "enum": [
+                    "empty",
+                    "short",
+                    "medium",
+                    "long"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
+          "userId": null,
+          "event_type": "contact_request_submitted",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "frontend_website",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "service_interest": "executive-search",
+            "form_country": "Chile",
+            "has_company": true,
+            "message_length_bucket": "medium"
+          }
+        }
+      ]
+    },
+    "telemetry_events_dropped": {
+      "title": "telemetry_events_dropped",
+      "description": "Eventos de telemetría descartados por un emisor (allowlist, cola llena, transporte o throttle).",
+      "x-origin": "identified",
+      "x-category": "observability",
+      "x-source": [
+        "backend_api"
+      ],
+      "x-trigger": "Los emisores (SDK del frontend y emisor del backend) cuentan los descartes y emiten un agregado cada 60 s si hubo alguno. El evento original **no** se reenvía.",
+      "x-rationale": "Capturamos telemetry_events_dropped porque necesitamos saber si la instrumentación está perdiendo datos o alguien intenta emitir propiedades fuera del allowlist, lo que nos permite corregir la instrumentación antes de que los reportes de Elena o Laura se basen en datos incompletos.",
+      "x-delivery": {
+        "mode": "batch",
+        "cadence": "horario",
+        "justification": "Hay que detectarlo el mismo día, pero no en el minuto: los datos perdidos ya no vuelven."
+      },
+      "x-pii": "Ninguna: se informan los nombres de las claves rechazadas, nunca sus valores.",
+      "x-throttle": "Agregado cada 60 s por (emitter, reason, affected_event_type).",
+      "x-allowlist": [
+        "emitter",
+        "reason",
+        "affected_event_type",
+        "dropped_count",
+        "rejected_keys"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "telemetry_events_dropped"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "context": {
+              "properties": {
+                "source": {
+                  "enum": [
+                    "backend_api"
+                  ]
+                }
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "emitter",
+                "reason",
+                "affected_event_type",
+                "dropped_count"
+              ],
+              "properties": {
+                "emitter": {
+                  "type": "string",
+                  "description": "Emisor.",
+                  "enum": [
+                    "frontend_backoffice",
+                    "frontend_website",
+                    "backend_api",
+                    "backend_job"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "Causa.",
+                  "enum": [
+                    "schema_violation",
+                    "queue_overflow",
+                    "transport_error",
+                    "throttled"
+                  ]
+                },
+                "affected_event_type": {
+                  "type": "string",
+                  "description": "event_type afectado.",
+                  "pattern": "^[a-z]+(_[a-z]+)+$"
+                },
+                "dropped_count": {
+                  "type": "integer",
+                  "description": "Eventos descartados en la ventana.",
+                  "minimum": 1
+                },
+                "rejected_keys": {
+                  "type": "array",
+                  "description": "Claves fuera del allowlist detectadas (sólo con reason=schema_violation). Nombres, nunca valores.",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 64
+                  },
+                  "maxItems": 20
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "eventId": "3b241101-e2bb-4255-8caf-4136c566a962",
+          "timestamp": "2026-11-15T10:42:17.123Z",
+          "sessionId": null,
+          "userId": null,
+          "event_type": "telemetry_events_dropped",
+          "schemaVersion": "1.0.0",
+          "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
+          "context": {
+            "source": "backend_api",
+            "environment": "production",
+            "appVersion": "e272808"
+          },
+          "properties": {
+            "emitter": "backend_api",
+            "reason": "schema_violation",
+            "affected_event_type": "outbound_order_created",
+            "dropped_count": 3,
+            "rejected_keys": [
+              "recipient_name"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
