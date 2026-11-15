@@ -31,6 +31,12 @@ if (existsSync(filename)) {
     ENABLE_DEMO: "true",
     DEMO_EMAIL: "demo@example.com",
     DEMO_PASSWORD: randomBytes(18).toString("base64url"),
+    // Telemetría de Nexova (docs/telemetry/telemetry-plan.md). El navegador envía
+    // los lotes directamente al API publicado en el puerto del host.
+    TELEMETRY_ENDPOINT: "http://localhost:8000/telemetry/events",
+    NEXT_PUBLIC_TELEMETRY_ENDPOINT: "http://localhost:8000/telemetry/events",
+    TELEMETRY_HASH_PEPPER: randomBytes(32).toString("hex"),
+    // Telemetría interna de Next.js (no la de Nexova): desactivada.
     NEXT_TELEMETRY_DISABLED: "1",
     WATCHPACK_POLLING: "true",
   };

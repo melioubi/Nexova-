@@ -70,11 +70,46 @@ def _get_engine():
     return _engine
 
 
+# Columns added after the tables already existed in some databases (local
+# SQLite files, Supabase). create_all() never alters an existing table, so
+# they are added here — additive only, never drops or rewrites data.
+_ADDED_COLUMNS: dict[str, dict[str, str]] = {
+    "talent_assets": {
+        "office": "VARCHAR(20) NOT NULL DEFAULT 'valencia'",
+        "product_category": "VARCHAR(40) NOT NULL DEFAULT 'training_kit'",
+        "programme_id": "VARCHAR(64) NOT NULL DEFAULT 'general'",
+        "min_stock": "INTEGER NOT NULL DEFAULT 5",
+    },
+    "talent_entries": {
+        "unit_cost": "FLOAT",
+        "supplier_id": "VARCHAR(64)",
+    },
+    "talent_exits": {
+        "recipient_type": "VARCHAR(20)",
+    },
+}
+
+
+def _add_missing_columns(engine) -> None:
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    with engine.begin() as connection:
+        for table, columns in _ADDED_COLUMNS.items():
+            if not inspector.has_table(table):
+                continue
+            existing = {c["name"] for c in inspector.get_columns(table)}
+            for name, ddl in columns.items():
+                if name not in existing:
+                    connection.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
+
+
 def init_db() -> None:
     """Create all ORM tables in Supabase (development only)."""
     from sqlmodel import SQLModel  # noqa: F811
 
     SQLModel.metadata.create_all(_get_engine())
+    _add_missing_columns(_get_engine())
 
     from api.telemetry.storage import create_table_for_local_dev
 

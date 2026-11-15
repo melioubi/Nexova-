@@ -9,8 +9,8 @@ from seed import main as seed_suppliers
 
 def main() -> None:
     if os.environ.get("SEED_ON_START", "false").lower() == "true":
+        seed_suppliers()  # first: inventory inbound orders reference supplier ids
         seed_data()
-        seed_suppliers()
     if os.environ.get("ENABLE_DEMO", "false").lower() == "true":
         if os.environ.get("APP_MODE", "development") != "development":
             raise RuntimeError("La cuenta demo solo se permite en desarrollo.")

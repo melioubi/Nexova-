@@ -34,7 +34,7 @@ export default function OrderRows({ orders }: { orders: TalentOrder[] }) {
 
   return <>
     {orders.slice(0, visibleCount).map((order) => <tr key={`${order.type}-${order.id}`}>
-      <td><strong>{order.talent_asset_name}</strong><small>{order.skill_category} · {order.country}</small></td><td><span className={`order-badge ${order.type}`}>{order.type === "inbound" ? "Entrada · TalentEntry" : "Salida · TalentExit"}</span></td><td>{order.quantity}</td><td><time dateTime={order.created_at}>{dateFormat.format(new Date(order.created_at))}</time></td><td className="user-uuid">{order.user_uuid}</td><td>{order.notes ?? "Sin notas"}</td>
+      <td><strong>{order.talent_asset_name}</strong><small>{order.programme_id} · {order.office}</small></td><td><span className={`order-badge ${order.type}`}>{order.type === "inbound" ? "Entrada · TalentEntry" : "Salida · TalentExit"}</span></td><td>{order.quantity}</td><td><time dateTime={order.created_at}>{dateFormat.format(new Date(order.created_at))}</time></td><td className="user-uuid">{order.user_uuid}</td><td>{order.notes ?? "Sin notas"}</td>
     </tr>)}
     {hasMore && <tr ref={sentinel} aria-hidden="true"><td colSpan={6} className="muted">Cargando más órdenes…</td></tr>}
   </>;

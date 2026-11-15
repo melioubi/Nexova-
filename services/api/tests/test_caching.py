@@ -131,10 +131,11 @@ def test_products_second_read_is_a_hit(inventory_client, headers):
 
 def test_cached_body_keeps_the_response_contract(inventory_client, headers):
     asset_id = _create_asset(inventory_client, headers)
-    inventory_client.post("/inventory/orders/inbound", json={"talent_asset_id": asset_id, "quantity": 3}, headers=headers)
+    inventory_client.post("/inventory/orders/inbound", json={"talent_asset_id": asset_id, "quantity": 3, "unit_cost": 10.0, "supplier_id": "sup-1"}, headers=headers)
     products = inventory_client.get("/inventory/products", headers=headers).json()
     orders = inventory_client.get("/inventory/orders", headers=headers).json()
-    assert set(products[0]) == {"id", "name", "skill_category", "country", "description", "current_stock"}
+    assert set(products[0]) == {"id", "name", "office", "product_category", "programme_id", "currency", "min_stock",
+                                "description", "current_stock", "skill_category", "country"}
     assert products[0]["current_stock"] == 3
     assert set(orders[0]) >= {"id", "type", "talent_asset_name", "quantity", "created_at", "user_uuid"}
 
@@ -144,7 +145,7 @@ def test_inbound_order_invalidates_products_and_orders(inventory_client, headers
     inventory_client.get("/inventory/products", headers=headers)
     inventory_client.get("/inventory/orders", headers=headers)
 
-    inventory_client.post("/inventory/orders/inbound", json={"talent_asset_id": asset_id, "quantity": 5}, headers=headers)
+    inventory_client.post("/inventory/orders/inbound", json={"talent_asset_id": asset_id, "quantity": 5, "unit_cost": 10.0, "supplier_id": "sup-1"}, headers=headers)
 
     products = inventory_client.get("/inventory/products", headers=headers)
     orders = inventory_client.get("/inventory/orders", headers=headers)
@@ -156,14 +157,14 @@ def test_inbound_order_invalidates_products_and_orders(inventory_client, headers
 
 def test_outbound_order_invalidates_and_rejected_one_does_not(inventory_client, headers):
     asset_id = _create_asset(inventory_client, headers)
-    inventory_client.post("/inventory/orders/inbound", json={"talent_asset_id": asset_id, "quantity": 5}, headers=headers)
+    inventory_client.post("/inventory/orders/inbound", json={"talent_asset_id": asset_id, "quantity": 5, "unit_cost": 10.0, "supplier_id": "sup-1"}, headers=headers)
     inventory_client.get("/inventory/products", headers=headers)
 
-    rejected = inventory_client.post("/inventory/orders/outbound", json={"talent_asset_id": asset_id, "quantity": 99}, headers=headers)
+    rejected = inventory_client.post("/inventory/orders/outbound", json={"talent_asset_id": asset_id, "quantity": 99, "recipient_type": "client"}, headers=headers)
     assert rejected.status_code == 400
     assert inventory_client.get("/inventory/products", headers=headers).headers["X-Cache"] == "HIT"
 
-    inventory_client.post("/inventory/orders/outbound", json={"talent_asset_id": asset_id, "quantity": 2}, headers=headers)
+    inventory_client.post("/inventory/orders/outbound", json={"talent_asset_id": asset_id, "quantity": 2, "recipient_type": "client"}, headers=headers)
     after = inventory_client.get("/inventory/products", headers=headers)
     assert after.headers["X-Cache"] == "MISS"
     assert after.json()[0]["current_stock"] == 3
@@ -181,16 +182,16 @@ def test_new_product_invalidates_product_list(inventory_client, headers):
 def test_outbound_guard_ignores_cache(inventory_client, headers):
     """Stock check for outbound orders must read the DB, not the cached list."""
     asset_id = _create_asset(inventory_client, headers)
-    inventory_client.post("/inventory/orders/inbound", json={"talent_asset_id": asset_id, "quantity": 2}, headers=headers)
+    inventory_client.post("/inventory/orders/inbound", json={"talent_asset_id": asset_id, "quantity": 2, "unit_cost": 10.0, "supplier_id": "sup-1"}, headers=headers)
     inventory_client.get("/inventory/products", headers=headers)  # cache: stock 2
     # A write that bypasses the API (no invalidation): stock in DB becomes 0.
     from sqlmodel import Session
     from api.inventory.models import TalentExit
 
     with Session(db_module._get_engine()) as s:
-        s.add(TalentExit(talent_asset_id=asset_id, quantity=2, user_uuid="manual"))
+        s.add(TalentExit(talent_asset_id=asset_id, quantity=2, user_uuid="manual", recipient_type="client"))
         s.commit()
-    response = inventory_client.post("/inventory/orders/outbound", json={"talent_asset_id": asset_id, "quantity": 1}, headers=headers)
+    response = inventory_client.post("/inventory/orders/outbound", json={"talent_asset_id": asset_id, "quantity": 1, "recipient_type": "client"}, headers=headers)
     assert response.status_code == 400
 
 

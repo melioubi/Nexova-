@@ -22,9 +22,16 @@ class TalentAsset(SQLModel, table=True):
 
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
     name: str = Field(min_length=1, max_length=200)
-    skill_category: str = Field(min_length=1, max_length=100)
-    country: str = Field(min_length=1, max_length=100)
+    # Legacy fields from the talent-inventory milestone (kept so existing data
+    # and endpoints keep working). The BRIEFING dimensions below replace them.
+    skill_category: str = Field(default="", max_length=100)
+    country: str = Field(default="", max_length=100)
     description: str | None = Field(default=None, max_length=500)
+    # nexova-BRIEFING §2: material de formación / kits de incorporación.
+    office: str = Field(default="valencia", max_length=20)               # valencia | miami
+    product_category: str = Field(default="training_kit", max_length=40)  # training_kit | certification | onboarding_equipment
+    programme_id: str = Field(default="general", max_length=64)          # slug, e.g. ventas-b2b
+    min_stock: int = Field(default=5, ge=0)                               # stock_threshold_triggered
 
 
 class TalentEntry(SQLModel, table=True):
@@ -41,6 +48,11 @@ class TalentEntry(SQLModel, table=True):
     notes: str | None = Field(default=None, max_length=500)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     user_uuid: str = Field(min_length=1)
+    # nexova-BRIEFING §3 (inbound_order_created, kit_cost_variance_detected).
+    # Nullable only for rows created before these fields existed; the API
+    # requires them for every new inbound order.
+    unit_cost: float | None = Field(default=None, ge=0)
+    supplier_id: str | None = Field(default=None, max_length=64)
 
 
 class TalentExit(SQLModel, table=True):
@@ -58,3 +70,5 @@ class TalentExit(SQLModel, table=True):
     notes: str | None = Field(default=None, max_length=500)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     user_uuid: str = Field(min_length=1)
+    # nexova-BRIEFING §2: who receives the kit (never their identity).
+    recipient_type: str | None = Field(default=None, max_length=20)  # client | candidate | consultant | support_agent

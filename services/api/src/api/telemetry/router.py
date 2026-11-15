@@ -18,9 +18,12 @@ Partial acceptance by design (telemetry-plan.md §9):
 from __future__ import annotations
 
 import logging
-from typing import Annotated, Any
+import json
+from collections import Counter
+from typing import Any
 
-from fastapi import APIRouter, Body, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -29,6 +32,12 @@ from api.telemetry.contract import TelemetryEvent
 from api.telemetry.storage import store_events
 
 logger = logging.getLogger("api.telemetry")
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s"))
+    logger.addHandler(_handler)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
@@ -64,9 +73,35 @@ def validate_batch(raw_events: list[Any]) -> tuple[list[TelemetryEvent], int]:
     return valid, rejected
 
 
-@router.post("/events", response_model=TelemetryIngestResult)
-def ingest_events(payload: Annotated[dict[str, Any], Body()]) -> TelemetryIngestResult:
-    raw_events = payload.get("events")
+def _parse_envelope(body: bytes) -> list[Any]:
+    """The body is JSON whatever the Content-Type: the frontend sends
+    ``text/plain`` on purpose (CORS-safelisted, so ``navigator.sendBeacon``
+    and the periodic flush need no preflight request)."""
+    try:
+        payload = json.loads(body or b"null")
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Body must be valid JSON.")
+    raw_events = payload.get("events") if isinstance(payload, dict) else None
+    if not isinstance(raw_events, list):
+        raise HTTPException(status_code=422, detail="Body must be an object with an 'events' array.")
+    return raw_events
+
+
+@router.post(
+    "/events",
+    response_model=TelemetryIngestResult,
+    openapi_extra={"requestBody": {"required": True, "content": {
+        "application/json": {"schema": {"type": "object", "required": ["events"],
+                                        "properties": {"events": {"type": "array", "items": {"type": "object"}}}}},
+        "text/plain": {"schema": {"type": "string"}},
+    }}},
+)
+async def ingest_events(request: Request) -> TelemetryIngestResult:
+    raw_events = _parse_envelope(await request.body())
+    return await run_in_threadpool(_ingest, raw_events)
+
+
+def _ingest(raw_events: list[Any]) -> TelemetryIngestResult:
     if not isinstance(raw_events, list):
         raise HTTPException(status_code=422, detail="Body must be an object with an 'events' array.")
     if len(raw_events) > MAX_BATCH:
@@ -75,6 +110,8 @@ def ingest_events(payload: Annotated[dict[str, Any], Body()]) -> TelemetryIngest
             detail=f"Batch too large: max {MAX_BATCH} events per request.",
         )
 
+    types = Counter(e.get("event_type") if isinstance(e, dict) else "<not-an-object>" for e in raw_events)
+    logger.info("telemetry batch received: %s events %s", len(raw_events), dict(types))
     valid, rejected = validate_batch(raw_events)
     try:
         stored = store_events(_get_engine(), valid)

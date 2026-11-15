@@ -24,6 +24,7 @@
 7. [Guía de implementación y verificación](#7-guía-de-implementación-y-verificación)
 8. [Verificación frente a la rúbrica](#8-verificación-frente-a-la-rúbrica)
 9. [Almacenamiento: `telemetry_events` en Supabase](#9-almacenamiento-telemetry_events-en-supabase)
+10. [Captura en el frontend: `TelemetryService` del backoffice](#10-captura-en-el-frontend-telemetryservice-del-backoffice)
 - [Anexo A — Especificación por evento (generada)](#anexo-a--especificación-por-evento)
 
 ---
@@ -194,6 +195,8 @@ Puntos descartados porque **no completaban la regla de oro**: ver §6.1.
 
 ## 3. Prerrequisitos de instrumentación
 
+> ✅ **Resuelto en el proyecto *Captura*** (ver §10). Se mantiene como registro de la decisión.
+>
 > ⚠️ **Sin esta sección el plan no se puede instrumentar.** El BRIEFING describe el inventario de Nexova como **material de formación y kits** en las oficinas de **Valencia y Miami**. El código implementado en hitos anteriores modela un inventario de **talento** (`TalentAsset`) en **Chile y Argentina**. Este plan sigue al BRIEFING (es la fuente que se evalúa y la que usarán Elena y Laura), así que el modelo debe alinearse **antes** de instrumentar.
 
 ### 3.1 Equivalencias entre el BRIEFING y el código actual
@@ -565,6 +568,53 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 
 ---
 
+## 10. Captura en el frontend: `TelemetryService` del backoffice
+
+> Implementado en el proyecto *Captura*: `uis/backoffice/src/services/telemetry.ts` y la instrumentación de las vistas. Los prerrequisitos de §3 quedaron resueltos en este mismo proyecto (campos del BRIEFING en el inventario, `PUT/PATCH/DELETE /inventory/products/{product_id}/stock` → 405, seed del BRIEFING §5).
+
+### 10.1 Contrato del servicio
+
+| Aspecto | Implementación |
+|---|---|
+| API pública | **Una sola función**: `track(eventType, properties)`. Ningún componente hace `fetch` de telemetría |
+| Envelope automático | `eventId` (UUID v4 al capturar), `timestamp` (ISO 8601 UTC con ms, momento de captura), `sessionId` (se genera al hacer login, al ver el primer token nuevo; rota tras 30 min de inactividad; vive en `sessionStorage`), `userId` (`sub` del JWT), `schemaVersion` (constante generada por evento), `requestId` (el `X-Request-Id` de la llamada al API que acaba de responder, o uno nuevo) y `context` |
+| Allowlist | `telemetry-contract.ts`, **generado** por `build_schemas.py` desde la misma fuente que `event-schemas.json`. Es *fail-closed*: un tipo desconocido, una clave fuera del allowlist o una requerida ausente hacen que el evento **no se envíe** |
+| Cola y lote | Cola en memoria. Se envía a los **10 s** del primer evento pendiente o en cuanto hay **20**, lo que ocurra antes. Tope de 200 eventos en memoria (si se supera, se descartan los más antiguos) |
+| Flush fiable | `navigator.sendBeacon` en `visibilitychange → hidden` y en `pagehide` |
+| Reintentos | Error de red, 5xx o 429 → hasta **3 reintentos** con backoff de 1 s, 2 s y 4 s; después se descarta el lote. Un 4xx no se reintenta |
+| Endpoint | `NEXT_PUBLIC_TELEMETRY_ENDPOINT`, sin URL fija en el código. El cuerpo es JSON enviado como `text/plain`: es un tipo CORS-safelisted, así que no hay *preflight* y `sendBeacon` funciona entre orígenes. El backend lo parsea igual (`TELEMETRY_ENDPOINT` declara el mismo valor en el backend) |
+| Perfil vs. uso | Nombre, email y perfil siguen en la base principal. La telemetría sólo lleva hechos *append-only* con IDs seudónimos |
+
+### 10.2 Qué captura cada evento y dónde
+
+| Evento | Origen | Componente / hook que lo captura |
+|---|---|---|
+| `inbound_order_created` | **obligatorio** | `components/talent-order-form.tsx`, tras el 201 de la entrada |
+| `outbound_order_created` | **obligatorio** | `components/talent-order-form.tsx`, tras el 201 de la salida |
+| `stock_threshold_triggered` | **obligatorio** | `components/talent-order-form.tsx`, salida con `threshold_triggered: true` (lo decide el backend) |
+| `direct_stock_edit_rejected` | **obligatorio** | `app/(protected)/backoffice/inventory/products/page.tsx`, acción *Corregir stock* → 405 |
+| `kit_cost_variance_detected` | **obligatorio** | `components/talent-order-form.tsx`, entrada cuya respuesta trae `cost_variance` |
+| `outbound_order_rejected` | identificado | `components/talent-order-form.tsx`, 400 por stock insuficiente |
+| `order_validation_failed` | identificado | `components/talent-order-form.tsx`, validación local al enviar o 422 |
+| `order_form_abandoned` | identificado | `components/talent-order-form.tsx`, al desmontar o en `pagehide` sin registrar |
+| `page_viewed` | identificado | `components/telemetry-provider.tsx` (`usePathname`, layout raíz) |
+| `page_load_recorded` | identificado | `components/telemetry-provider.tsx` (`useReportWebVitals`: LCP, INP, TTFB, CLS) |
+| `frontend_error_captured` | identificado | `components/telemetry-provider.tsx` (`error`, `unhandledrejection`) y `app/error.tsx` (Error Boundary) |
+| `api_request_failed` | identificado | `lib/api.ts` → `request()` (red caída o 5xx) |
+| `session_expired` | identificado | `components/auth-guard.tsx` (evento `nexova:session-expired`) |
+| `user_logged_out` | identificado | `app/page.tsx` → *Cerrar sesión* |
+| `list_filter_applied` | identificado | `app/(protected)/backoffice/suppliers/page.tsx` (debounce de 1 s) |
+| `login_failed` | identificado | **Backend** (`api/auth/router.py`). El frontend no puede calcular el HMAC sin exponer el *pepper* (§4.5) |
+
+### 10.3 Cambios de contrato (v1.1.0) y por qué
+
+1. **`frontend_backoffice` como origen permitido** en los 5 obligatorios, en `outbound_order_rejected` y en `order_validation_failed`. Este proyecto exige capturarlos en el backoffice. Para no duplicarlos, los emite **sólo** el frontend, tras la respuesta 2xx del API y con los valores que devuelve el backend (`stock_after`, `threshold_triggered`, `cost_variance`). La garantía del outbox transaccional (§3.4) queda como mejora futura: hoy, si la pestaña se cierra antes del flush, `sendBeacon` cubre la salida, pero no hay garantía absoluta.
+2. **Rol `manager`** añadido al enum de `user_role`. Es un rol real del API que la v1.0.0 había omitido; sin él, un *manager* generaría eventos inválidos.
+
+Los dos cambios son menores según §4.4 (sólo añaden valores), así que esos eventos pasan a `schemaVersion` `1.1.0`.
+
+---
+
 ## Anexo A — Especificación por evento
 
 > Sección **generada** por `tools/build_schemas.py` a partir de la misma definición que `event-schemas.json`. Para cambiarla, edita el script y regenera.
@@ -579,10 +629,11 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | **Obligatorio** (BRIEFING) |
 | Categoría | `inventory` |
-| Emisor (`context.source`) | `backend_api` |
+| `schemaVersion` | `1.1.0` |
+| Emisor (`context.source`) | `backend_api` o `frontend_backoffice` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | Se registró (commit OK) una InboundOrder: llegó un lote de material desde un proveedor. |
-| Cuándo se emite | `POST /inventory/orders/inbound` → 201, inmediatamente después del `session.commit()` en el servicio de órdenes de entrada (hoy `create_entry` en `services/api/src/api/inventory/service.py`). Nunca antes del commit ni en un reintento que falle. |
+| Cuándo se emite | `POST /inventory/orders/inbound` → 201, inmediatamente después del `session.commit()` en el servicio de órdenes de entrada (hoy `create_entry` en `services/api/src/api/inventory/service.py`). Nunca antes del commit ni en un reintento que falle. **Captura (v1.1.0):** lo emite el backoffice con `track()`: `talent-order-form.tsx` → tras la respuesta **201** de `POST /inventory/orders/inbound`. `order_id`, `stock_after`, `unit_cost` y `supplier_id` salen de esa respuesta; `office`, `product_category` y `programme_id`, del producto. |
 | Justificación | Capturamos `inbound_order_created` porque necesitamos saber **cuánto material se produce/compra, para qué programa y con qué costo**, lo que nos permite **planificar la producción de material según la demanda esperada de matrículas (Elena)**. |
 | Entrega | **batch** · diario (02:00 hora de la oficina). La decisión que alimenta es de planificación de producción (horizonte semanas). Ver una entrada con horas de retraso no cambia ninguna acción. La parte urgente (costo anómalo) se separa en `kit_cost_variance_detected`, que va por stream. |
 | PII / sanitización | Ninguna. `userId` (UUID interno) va en el envelope. `notes` (texto libre del consultor) **no se emite**: puede contener nombres. |
@@ -612,7 +663,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
   "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
   "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
   "event_type": "inbound_order_created",
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
   "context": {
     "source": "backend_api",
@@ -642,10 +693,11 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | **Obligatorio** (BRIEFING) |
 | Categoría | `inventory` |
-| Emisor (`context.source`) | `backend_api` |
+| `schemaVersion` | `1.1.0` |
+| Emisor (`context.source`) | `backend_api` o `frontend_backoffice` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | Se registró (commit OK) una OutboundOrder: se entregó un kit o certificado. |
-| Cuándo se emite | `POST /inventory/orders/outbound` → 201, después del commit (hoy `create_exit`). Las salidas rechazadas emiten `outbound_order_rejected`, nunca este evento. |
+| Cuándo se emite | `POST /inventory/orders/outbound` → 201, después del commit (hoy `create_exit`). Las salidas rechazadas emiten `outbound_order_rejected`, nunca este evento. **Captura (v1.1.0):** lo emite el backoffice con `track()`: `talent-order-form.tsx` → tras la respuesta **201** de `POST /inventory/orders/outbound` (`order_id`, `stock_after` y `recipient_type` de la respuesta). |
 | Justificación | Capturamos `outbound_order_created` porque necesitamos saber **qué programas consumen más material y a qué ritmo**, lo que nos permite **anticipar necesidades de reposición antes de una ola grande de matrículas (Elena)**. |
 | Entrega | **batch** · diario (02:00 hora de la oficina). Anticipar reposición es una decisión de días o semanas basada en tendencia (ritmo de consumo), no en una entrega individual. El caso urgente (quedarse bajo el mínimo) lo cubre `stock_threshold_triggered` por stream. |
 | PII / sanitización | El destinatario es una persona (cliente, candidato, consultor o agente): **sólo se emite `recipient_type`**, nunca su nombre, email ni ID de persona (BRIEFING §3). `notes` no se emite. |
@@ -673,7 +725,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
   "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
   "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
   "event_type": "outbound_order_created",
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
   "context": {
     "source": "backend_api",
@@ -701,10 +753,11 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | **Obligatorio** (BRIEFING) |
 | Categoría | `inventory` |
-| Emisor (`context.source`) | `backend_api` |
+| `schemaVersion` | `1.1.0` |
+| Emisor (`context.source`) | `backend_api` o `frontend_backoffice` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | El stock de un Product en una oficina cruzó hacia abajo su mínimo configurado (`stock_after < min_stock`). |
-| Cuándo se emite | Se evalúa en la misma transacción lógica que una OutboundOrder (tras su commit) y al cambiar `min_stock` de un Product. Se emite **sólo en el cruce** (`stock_before >= min_stock` y `stock_after < min_stock`), no en cada orden mientras siga por debajo (histéresis, ver §5.3). |
+| Cuándo se emite | Se evalúa en la misma transacción lógica que una OutboundOrder (tras su commit) y al cambiar `min_stock` de un Product. Se emite **sólo en el cruce** (`stock_before >= min_stock` y `stock_after < min_stock`), no en cada orden mientras siga por debajo (histéresis, ver §5.3). **Captura (v1.1.0):** lo emite el backoffice con `track()`: `talent-order-form.tsx` → tras la respuesta 201 de una salida con `threshold_triggered: true`. El backend decide el cruce (`stock_before >= min_stock > stock_after`) y el frontend no recalcula nada. |
 | Justificación | Capturamos `stock_threshold_triggered` porque necesitamos saber **con qué frecuencia un programa se queda sin material disponible**, lo que nos permite **ajustar el umbral mínimo o acelerar la reimpresión/reproducción de ese material**. |
 | Entrega | **stream** · ≤ 1 min, con alerta a L&D (Elena) y a la oficina. Reimprimir o reproducir material tiene plazo de entrega de días: cada hora que pasa sin enterarse reduce el margen antes de quedarse sin kits para una matrícula. Es la única señal de inventario que exige acción el mismo día. |
 | PII / sanitización | Ninguna. |
@@ -733,7 +786,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
   "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
   "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
   "event_type": "stock_threshold_triggered",
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
   "context": {
     "source": "backend_api",
@@ -762,10 +815,11 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | **Obligatorio** (BRIEFING) |
 | Categoría | `inventory` |
-| Emisor (`context.source`) | `backend_api` |
+| `schemaVersion` | `1.1.0` |
+| Emisor (`context.source`) | `backend_api` o `frontend_backoffice` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | Un usuario autenticado intentó modificar el stock fuera de una orden y el API lo rechazó. |
-| Cuándo se emite | El API rechaza (ver §3.3 del plan): (a) `PUT`/`PATCH`/`DELETE` sobre `/inventory/products/{product_id}/stock` → 405; (b) un body de `POST /inventory/products` o `PUT/PATCH /inventory/products/{product_id}` que incluya una clave de stock (`current_stock`, `stock`, `quantity`) → 422. Sólo se emite si el Product existe (si no, es un 404 normal). |
+| Cuándo se emite | El API rechaza (ver §3.3 del plan): (a) `PUT`/`PATCH`/`DELETE` sobre `/inventory/products/{product_id}/stock` → 405; (b) un body de `POST /inventory/products` o `PUT/PATCH /inventory/products/{product_id}` que incluya una clave de stock (`current_stock`, `stock`, `quantity`) → 422. Sólo se emite si el Product existe (si no, es un 404 normal). **Captura (v1.1.0):** lo emite el backoffice con `track()`: `backoffice/inventory/products/page.tsx` → la acción *Corregir stock* envía `PATCH /inventory/products/{product_id}/stock`; el API responde **405** y se emite el evento (`attempt_channel=stock_endpoint_write`). |
 | Justificación | Capturamos `direct_stock_edit_rejected` porque necesitamos saber **si el personal intenta saltarse el control de trazabilidad del material**, lo que nos permite **reforzar capacitación o permisos en la oficina donde esto ocurre con más frecuencia (Patricia)**. |
 | Entrega | **stream** · ≤ 1 min, alerta si ≥ 3 intentos del mismo userId en 10 min. La decisión de Patricia (capacitación/permisos) se toma con el agregado semanal. Pero un intento de saltarse la trazabilidad también puede ser un script o una cuenta comprometida: eso hay que detectarlo en minutos, no al día siguiente. El agregado semanal se calcula sobre el mismo flujo. |
 | PII / sanitización | Ninguna. El userId (UUID interno) va en el envelope para poder agregar por persona sin exponer su identidad. |
@@ -784,7 +838,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 | `endpoint` | string ∈ {`/`, `/health`, `/auth/login`, `/auth/me`, `/users`, `/users/{user_id}`, `/profiles/me`, `/inventory/products`, `/inventory/products/{product_id}`, `/inventory/products/{product_id}/stock`, `/inventory/orders`, `/inventory/orders/inbound`, `/inventory/orders/outbound`, `/suppliers`, `/suppliers/{supplier_id}`, `/suppliers/{supplier_id}/rate`, `/suppliers/{supplier_id}/status`, `/candidates`, `/clients`, `/vacancies`, `/interviews`, `/evaluations`} | sí | Plantilla de ruta del API (sin IDs reales ni query string). |
 | `http_method` | string ∈ {`GET`, `POST`, `PUT`, `PATCH`, `DELETE`} | sí | Método HTTP del intento. |
 | `http_status` | integer ∈ {`405`, `422`} | sí | Código devuelto por el API. |
-| `user_role` | string ∈ {`admin`, `recruiter`, `client`, `candidate`, `user`} | sí | Rol del usuario que lo intentó. |
+| `user_role` | string ∈ {`admin`, `manager`, `recruiter`, `client`, `candidate`, `user`} | sí | Rol del usuario que lo intentó. |
 
 <details><summary>Ejemplo válido</summary>
 
@@ -795,7 +849,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
   "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
   "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
   "event_type": "direct_stock_edit_rejected",
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
   "context": {
     "source": "backend_api",
@@ -825,10 +879,11 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | **Obligatorio** (BRIEFING) |
 | Categoría | `inventory` |
-| Emisor (`context.source`) | `backend_api` |
+| `schemaVersion` | `1.1.0` |
+| Emisor (`context.source`) | `backend_api` o `frontend_backoffice` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | El costo unitario de una InboundOrder se desvía más que el umbral respecto al histórico del mismo material y proveedor. |
-| Cuándo se emite | Tras el commit de una InboundOrder. Baseline = media de `unit_cost` de las **últimas 5** InboundOrders del mismo `product_id` + `supplier_id` + `currency` en los últimos 365 días, excluyendo la actual. Se emite si `|variance_pct| > threshold_pct` (por defecto 10) **y** el baseline tiene ≥ 3 órdenes. Sin conversión de moneda: sólo se compara contra la misma moneda. |
+| Cuándo se emite | Tras el commit de una InboundOrder. Baseline = media de `unit_cost` de las **últimas 5** InboundOrders del mismo `product_id` + `supplier_id` + `currency` en los últimos 365 días, excluyendo la actual. Se emite si `|variance_pct| > threshold_pct` (por defecto 10) **y** el baseline tiene ≥ 3 órdenes. Sin conversión de moneda: sólo se compara contra la misma moneda. **Captura (v1.1.0):** lo emite el backoffice con `track()`: `talent-order-form.tsx` → tras la respuesta 201 de una entrada cuyo cuerpo trae `cost_variance` (baseline calculado por el backend sobre el histórico del mismo producto y proveedor). |
 | Justificación | Capturamos `kit_cost_variance_detected` porque necesitamos saber **cuándo un proveedor de material sube precios de forma anómala**, lo que nos permite **alertar a Elena y a Laura para renegociar o buscar un proveedor alternativo**. |
 | Entrega | **stream** · ≤ 1 min, alerta si direction=increase. El BRIEFING pide alertar: el valor está en enterarse antes de aprobar el pago o confirmar el siguiente pedido a ese proveedor. Las bajadas (direction=decrease) también se emiten porque suelen ser errores de carga, pero se revisan en el lote diario. |
 | PII / sanitización | Ninguna. |
@@ -861,7 +916,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
   "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
   "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
   "event_type": "kit_cost_variance_detected",
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
   "context": {
     "source": "backend_api",
@@ -896,10 +951,11 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `inventory` |
-| Emisor (`context.source`) | `backend_api` |
+| `schemaVersion` | `1.1.0` |
+| Emisor (`context.source`) | `backend_api` o `frontend_backoffice` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | Una OutboundOrder fue rechazada por falta de stock (hoy HTTP 400 en `create_exit`). |
-| Cuándo se emite | `POST /inventory/orders/outbound` → 400 por stock insuficiente, en la rama `ValueError` del router. |
+| Cuándo se emite | `POST /inventory/orders/outbound` → 400 por stock insuficiente, en la rama `ValueError` del router. **Captura (v1.1.0):** lo emite el backoffice con `track()`: `talent-order-form.tsx` → respuesta **400** por stock insuficiente (`stock_available` = el stock consultado al elegir el producto). |
 | Justificación | Capturamos `outbound_order_rejected` porque necesitamos saber **cuánta demanda de material no se pudo entregar (demanda oculta que las salidas exitosas no muestran)**, lo que nos permite **subir `min_stock` o adelantar la reposición de los programas con más entregas rechazadas**. |
 | Entrega | **batch** · diario. Lo que se decide es el ajuste de mínimos y reposición, una revisión periódica. La urgencia operativa ya la cubre `stock_threshold_triggered`. |
 | PII / sanitización | Ninguna (sólo `recipient_type`). |
@@ -927,7 +983,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
   "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
   "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
   "event_type": "outbound_order_rejected",
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
   "context": {
     "source": "backend_api",
@@ -955,10 +1011,11 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `inventory` |
-| Emisor (`context.source`) | `backend_api` |
+| `schemaVersion` | `1.1.0` |
+| Emisor (`context.source`) | `backend_api` o `frontend_backoffice` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | Una orden o alta de Product no pasó la validación, en el cliente (formulario) o en el servidor (422). |
-| Cuándo se emite | Servidor: handler de `RequestValidationError` para `/inventory/*` (422). Cliente: al pulsar *Registrar* en el formulario de órdenes si la validación local bloquea el envío (hoy `handleSubmit` en `talent-order-form.tsx`). **Nunca por pulsación de tecla.** |
+| Cuándo se emite | Servidor: handler de `RequestValidationError` para `/inventory/*` (422). Cliente: al pulsar *Registrar* en el formulario de órdenes si la validación local bloquea el envío (hoy `handleSubmit` en `talent-order-form.tsx`). **Nunca por pulsación de tecla.** **Captura (v1.1.0):** lo emite el backoffice con `track()`: `talent-order-form.tsx` → validación local al pulsar *Registrar* (`validation_layer=client`) o respuesta **422** del API (`server`, con los nombres de campo de `detail[].loc` y los tipos de `detail[].type`). |
 | Justificación | Capturamos `order_validation_failed` porque necesitamos saber **qué productos y qué campos acumulan más errores de validación (pregunta literal del tech lead)**, lo que nos permite **corregir el formulario o la ayuda contextual de los campos más fallados, o capacitar en la oficina con más errores**. |
 | Entrega | **batch** · diario. Mejorar UX y capacitar son decisiones de sprint. Un error de validación no causa daño: la orden simplemente no se guarda. |
 | PII / sanitización | Riesgo: los mensajes de Pydantic incluyen el **valor** recibido (`input`). Se emiten sólo `loc[-1]` (nombre de campo, contra allowlist) y `type`. Nunca `msg` ni `input`. |
@@ -984,7 +1041,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
   "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
   "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
   "event_type": "order_validation_failed",
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
   "context": {
     "source": "backend_api",
@@ -1014,6 +1071,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `inventory` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `backend_api` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | Se dio de alta un Product (ítem de material) en una oficina. |
@@ -1067,6 +1125,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `inventory` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `backend_api` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | Un Product que estaba bajo su mínimo volvió a `stock >= min_stock` (cierra el episodio abierto por `stock_threshold_triggered`). |
@@ -1126,6 +1185,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `inventory` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `backend_job` |
 | `userId` / `sessionId` | null (job) |
 | Descripción | Foto diaria del stock por Product y oficina, generada por un job programado. |
@@ -1185,6 +1245,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `navigation` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `frontend_backoffice` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | El usuario empezó a completar un formulario de orden y salió sin registrarla. |
@@ -1238,6 +1299,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `suppliers` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `backend_api` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | Se cambió la tarifa mensual de un proveedor del directorio. |
@@ -1291,6 +1353,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `suppliers` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `backend_api` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | Un proveedor pasó de activo a suspendido o al revés. |
@@ -1344,6 +1407,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `auth` |
+| `schemaVersion` | `1.1.0` |
 | Emisor (`context.source`) | `backend_api` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | Inicio de sesión correcto en el backoffice. |
@@ -1356,7 +1420,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 
 | Propiedad | Tipo | Oblig. | Descripción |
 |---|---|---|---|
-| `user_role` | string ∈ {`admin`, `recruiter`, `client`, `candidate`, `user`} | sí | Rol del usuario. |
+| `user_role` | string ∈ {`admin`, `manager`, `recruiter`, `client`, `candidate`, `user`} | sí | Rol del usuario. |
 | `auth_method` | string ∈ {`password`} | sí | Método. |
 
 <details><summary>Ejemplo válido</summary>
@@ -1368,7 +1432,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
   "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
   "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
   "event_type": "login_succeeded",
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
   "context": {
     "source": "backend_api",
@@ -1389,6 +1453,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `auth` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `backend_api` |
 | `userId` / `sessionId` | pueden ser null (evento anónimo o de sistema) |
 | Descripción | Intento de inicio de sesión fallido. |
@@ -1437,6 +1502,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `auth` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `frontend_backoffice` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | La sesión del usuario caducó (401) mientras usaba el backoffice. |
@@ -1486,6 +1552,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `auth` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `frontend_backoffice` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | El usuario cerró sesión voluntariamente. |
@@ -1529,6 +1596,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `auth` |
+| `schemaVersion` | `1.1.0` |
 | Emisor (`context.source`) | `backend_api` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | Se creó una cuenta nueva (`POST /users` → 201). |
@@ -1541,7 +1609,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 
 | Propiedad | Tipo | Oblig. | Descripción |
 |---|---|---|---|
-| `user_role` | string ∈ {`admin`, `recruiter`, `client`, `candidate`, `user`} | sí | Rol asignado al crear. |
+| `user_role` | string ∈ {`admin`, `manager`, `recruiter`, `client`, `candidate`, `user`} | sí | Rol asignado al crear. |
 | `email_domain_class` | string ∈ {`corporate`, `external`} | sí | Si el dominio del email es corporativo de Nexova o externo. Nunca el dominio en sí. |
 
 <details><summary>Ejemplo válido</summary>
@@ -1553,7 +1621,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
   "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
   "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
   "event_type": "user_registered",
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
   "context": {
     "source": "backend_api",
@@ -1574,6 +1642,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `auth` |
+| `schemaVersion` | `1.1.0` |
 | Emisor (`context.source`) | `backend_api` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | Un usuario autenticado pidió un recurso para el que no tiene permiso (403). |
@@ -1588,7 +1657,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|---|---|
 | `endpoint` | string ∈ {`/`, `/health`, `/auth/login`, `/auth/me`, `/users`, `/users/{user_id}`, `/profiles/me`, `/inventory/products`, `/inventory/products/{product_id}`, `/inventory/products/{product_id}/stock`, `/inventory/orders`, `/inventory/orders/inbound`, `/inventory/orders/outbound`, `/suppliers`, `/suppliers/{supplier_id}`, `/suppliers/{supplier_id}/rate`, `/suppliers/{supplier_id}/status`, `/candidates`, `/clients`, `/vacancies`, `/interviews`, `/evaluations`} | sí | Plantilla de ruta del API (sin IDs reales ni query string). |
 | `http_method` | string ∈ {`GET`, `POST`, `PUT`, `PATCH`, `DELETE`} | sí | Método. |
-| `user_role` | string ∈ {`admin`, `recruiter`, `client`, `candidate`, `user`} | sí | Rol del usuario. |
+| `user_role` | string ∈ {`admin`, `manager`, `recruiter`, `client`, `candidate`, `user`} | sí | Rol del usuario. |
 
 <details><summary>Ejemplo válido</summary>
 
@@ -1599,7 +1668,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
   "sessionId": "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
   "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e",
   "event_type": "access_denied",
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
   "context": {
     "source": "backend_api",
@@ -1621,6 +1690,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `performance` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `backend_api` |
 | `userId` / `sessionId` | pueden ser null (evento anónimo o de sistema) |
 | Descripción | Agregado de latencia por ruta en una ventana de 60 s (no un evento por petición). |
@@ -1684,6 +1754,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `performance` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `frontend_backoffice` o `frontend_website` |
 | `userId` / `sessionId` | pueden ser null (evento anónimo o de sistema) |
 | Descripción | Métricas de carga real (Core Web Vitals) de una vista del backoffice o del website. |
@@ -1739,6 +1810,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `performance` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `backend_api` |
 | `userId` / `sessionId` | pueden ser null (evento anónimo o de sistema) |
 | Descripción | Una consulta SQL superó 200 ms. |
@@ -1790,6 +1862,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `errors` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `backend_api` |
 | `userId` / `sessionId` | pueden ser null (evento anónimo o de sistema) |
 | Descripción | El API devolvió un 5xx (excepción no controlada). |
@@ -1843,6 +1916,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `errors` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `frontend_backoffice` o `frontend_website` |
 | `userId` / `sessionId` | pueden ser null (evento anónimo o de sistema) |
 | Descripción | Error de JavaScript no controlado en el navegador. |
@@ -1896,6 +1970,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `errors` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `frontend_backoffice` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | Una llamada del frontend al API falló desde el punto de vista del usuario (red, timeout o error HTTP inesperado). |
@@ -1948,6 +2023,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `navigation` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `frontend_backoffice` o `frontend_website` |
 | `userId` / `sessionId` | pueden ser null (evento anónimo o de sistema) |
 | Descripción | Se mostró una vista del backoffice o del website. |
@@ -1999,6 +2075,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `navigation` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `frontend_backoffice` |
 | `userId` / `sessionId` | obligatorios (no null) |
 | Descripción | El usuario aplicó o cambió filtros en un listado. |
@@ -2049,6 +2126,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `navigation` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `frontend_website` |
 | `userId` / `sessionId` | pueden ser null (evento anónimo o de sistema) |
 | Descripción | Un visitante del website llegó a la sección de Contacto. |
@@ -2096,6 +2174,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `commercial` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `frontend_website` |
 | `userId` / `sessionId` | pueden ser null (evento anónimo o de sistema) |
 | Descripción | Un visitante envió el formulario de contacto del website. |
@@ -2145,6 +2224,7 @@ El análisis necesita `sessionId` (embudos y abandono), `userId` (agregación po
 |---|---|
 | Origen | Oportunidad identificada |
 | Categoría | `observability` |
+| `schemaVersion` | `1.0.0` |
 | Emisor (`context.source`) | `backend_api` |
 | `userId` / `sessionId` | pueden ser null (evento anónimo o de sistema) |
 | Descripción | Eventos de telemetría descartados por un emisor (allowlist, cola llena, transporte o throttle). |

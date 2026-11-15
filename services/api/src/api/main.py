@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -35,7 +36,9 @@ if not timing_logger.handlers:
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Initialize database tables on startup (development only)."""
-    cache.enabled = get_settings().cache_enabled
+    settings = get_settings()
+    cache.enabled = settings.cache_enabled
+    timing_logger.info("telemetry endpoint (TELEMETRY_ENDPOINT): %s", settings.telemetry_endpoint)
     init_db()
     yield
 
@@ -48,9 +51,15 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
+    # Backoffice runs on 3000 (next dev) or 3001 (docker compose). The
+    # TelemetryService posts cross-origin to NEXT_PUBLIC_TELEMETRY_ENDPOINT.
     allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
+        origin.strip()
+        for origin in os.environ.get(
+            "CORS_ORIGINS",
+            "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001",
+        ).split(",")
+        if origin.strip()
     ],
     allow_credentials=True,
     allow_methods=["*"],

@@ -162,6 +162,53 @@ SUPPLIERS_SEED = [
 ]
 
 
+# Proveedores de material de formación y kits de incorporación
+# (nexova-BRIEFING §2: imprenta, plataforma de e-learning, proveedor de hardware).
+SUPPLIERS_SEED += [
+    {
+        "name": "Imprenta Levante",
+        "country": "Spain",
+        "categories": ["training_platforms"],
+        "monthly_rate": 650.0,
+        "currency": "EUR",
+        "status": "active",
+        "contract_renewal_date": "2027-02-28",
+        "contact_email": "pedidos@imprentalevante.es",
+        "notes": "Impresión de kits de certificación y manuales de formación (Valencia).",
+    },
+    {
+        "name": "Equipos Turia",
+        "country": "Spain",
+        "categories": ["it_and_software_licenses"],
+        "monthly_rate": 1200.0,
+        "currency": "EUR",
+        "status": "active",
+        "contact_email": "comercial@equiposturia.es",
+        "notes": "Laptops de asignación temporal para nuevas incorporaciones en Valencia.",
+    },
+    {
+        "name": "Miami Print & Training Supplies",
+        "country": "USA",
+        "categories": ["training_platforms"],
+        "monthly_rate": 720.0,
+        "currency": "USD",
+        "status": "active",
+        "contact_email": "orders@miamiprint.com",
+        "notes": "Manuales de onboarding para los agentes de soporte outsourced.",
+    },
+    {
+        "name": "TechRent Florida",
+        "country": "USA",
+        "categories": ["it_and_software_licenses"],
+        "monthly_rate": 1500.0,
+        "currency": "USD",
+        "status": "active",
+        "contact_email": "accounts@techrentflorida.com",
+        "notes": "Laptops y credenciales de acceso para incorporaciones en Miami.",
+    },
+]
+
+
 def main() -> None:
     existing_names = {record["name"] for record in suppliers_table.all()}
     inserted = 0

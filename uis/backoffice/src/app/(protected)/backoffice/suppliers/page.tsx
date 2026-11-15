@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { InventoryNav } from "@/components/inventory-nav";
 import { createSupplier, listSuppliers, Supplier, supplierCategories, updateSupplier } from "@/lib/suppliers";
+import { track } from "@/services/telemetry";
+
+const FILTER_DEBOUNCE_MS = 1000; // telemetry-plan.md §5.3
 
 function renewalSoon(value: string | null) {
   if (!value) return false;
@@ -20,12 +23,26 @@ export default function SuppliersPage() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [revision, setRevision] = useState(0);
+  // list_filter_applied (plan A.27): only filters changed by the user, emitted
+  // once the result settles (debounce), with the real result count.
+  const filtersTouched = useRef(false);
+  const filterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
     listSuppliers(country, category, controller.signal).then((data) => {
       setSuppliers(data);
       setError("");
+      if (filtersTouched.current) {
+        if (filterTimer.current) clearTimeout(filterTimer.current);
+        filterTimer.current = setTimeout(() => {
+          track("list_filter_applied", {
+            view: "suppliers_directory",
+            filter_keys: [country && "country", category && "category"].filter(Boolean),
+            result_count: data.length,
+          });
+        }, FILTER_DEBOUNCE_MS);
+      }
     }).catch((issue: unknown) => {
       if (!controller.signal.aborted) setError(issue instanceof Error ? issue.message : "No se pudo cargar el directorio.");
     }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
@@ -69,8 +86,8 @@ export default function SuppliersPage() {
     <section>
       <header className="inventory-heading"><p className="eyebrow">Operaciones</p><h1>Directorio de proveedores</h1></header>
       <div className="supplier-toolbar">
-        <label>País<select value={country} onChange={(event) => { setLoading(true); setCountry(event.target.value); }}><option value="">Todos</option><option>Spain</option><option>USA</option></select></label>
-        <label>Categoría<select value={category} onChange={(event) => { setLoading(true); setCategory(event.target.value); }}><option value="">Todas</option>{supplierCategories.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+        <label>País<select value={country} onChange={(event) => { filtersTouched.current = true; setLoading(true); setCountry(event.target.value); }}><option value="">Todos</option><option>Spain</option><option>USA</option></select></label>
+        <label>Categoría<select value={category} onChange={(event) => { filtersTouched.current = true; setLoading(true); setCategory(event.target.value); }}><option value="">Todas</option>{supplierCategories.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
         <button className="button" onClick={() => setShowForm(!showForm)}>{showForm ? "Cerrar formulario" : "Registrar proveedor"}</button>
       </div>
       {error && <p className="inventory-error" role="alert">{error}</p>}
