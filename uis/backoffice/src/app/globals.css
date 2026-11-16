@@ -55,3 +55,21 @@ label { display: grid; gap: 7px; font-family: Arial, sans-serif; font-size: .88r
 	.stock-readout small { grid-column: auto; }
 	.inventory-form .button { width: 100%; }
 }
+/* "Corregir stock" — text-style action inside the stock cell */
+.link-button {
+  display: block;
+  margin-top: 0.35rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  text-decoration: underline;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.link-button:hover,
+.link-button:focus-visible {
+  opacity: 1;
+}

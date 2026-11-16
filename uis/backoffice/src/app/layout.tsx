@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { TelemetryProvider } from "@/components/telemetry-provider";
 
 export const metadata: Metadata = {
   title: "Nexova Backoffice",
@@ -12,7 +13,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        <TelemetryProvider />
+        {children}
+      </body>
     </html>
   );
 }

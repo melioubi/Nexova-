@@ -14,6 +14,9 @@ services:
       ENABLE_DEMO: ${ENABLE_DEMO:?}
       DEMO_EMAIL: ${DEMO_EMAIL:?}
       DEMO_PASSWORD: ${DEMO_PASSWORD:?}
+      # Defaults keep .env files created before the telemetry projects working.
+      TELEMETRY_ENDPOINT: ${TELEMETRY_ENDPOINT:-http://localhost:8000/telemetry/events}
+      TELEMETRY_HASH_PEPPER: ${TELEMETRY_HASH_PEPPER:-}
     ports:
       - "${HOST_BIND:?}:${API_HOST_PORT:?}:${API_PORT:?}"
     volumes:
@@ -39,6 +42,7 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?}
       NEXT_PUBLIC_INVENTORY_API_URL: ${NEXT_PUBLIC_INVENTORY_API_URL:?}
       NEXT_PUBLIC_BACKOFFICE_URL: ${NEXT_PUBLIC_BACKOFFICE_URL:?}
+      NEXT_PUBLIC_TELEMETRY_ENDPOINT: ${NEXT_PUBLIC_TELEMETRY_ENDPOINT:-http://localhost:8000/telemetry/events}
       NEXT_TELEMETRY_DISABLED: ${NEXT_TELEMETRY_DISABLED:?}
       WATCHPACK_POLLING: ${WATCHPACK_POLLING:?}
       NEXT_ALLOWED_DEV_ORIGINS: ${NEXT_ALLOWED_DEV_ORIGINS:?}

@@ -3,6 +3,7 @@
 Generates, from the definitions below:
   * docs/telemetry/event-schemas.json  (JSON Schema draft-07, validable)
   * services/api/src/api/telemetry/event-schemas.json (copia idéntica que usa el backend)
+  * uis/backoffice/src/services/telemetry-contract.ts (allowlists para el TelemetryService)
   * the per-event specification section of docs/telemetry/telemetry-plan.md
     (between the BEGIN/END GENERATED markers)
 
@@ -28,6 +29,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "event-schemas.json"
 # Copia que usa el backend en runtime (la imagen Docker sólo incluye services/api).
 SERVICE_SCHEMA_PATH = ROOT.parents[1] / "services" / "api" / "src" / "api" / "telemetry" / "event-schemas.json"
+# Allowlists for the frontend TelemetryService (fail-closed validation before sending).
+TS_CONTRACT_PATH = ROOT.parents[1] / "uis" / "backoffice" / "src" / "services" / "telemetry-contract.ts"
 PLAN_PATH = ROOT / "telemetry-plan.md"
 BEGIN = "<!-- BEGIN GENERATED: event-specs (docs/telemetry/tools/build_schemas.py) -->"
 END = "<!-- END GENERATED: event-specs -->"
@@ -45,7 +48,9 @@ OFFICES = ["valencia", "miami"]
 CURRENCIES = ["EUR", "USD"]
 PRODUCT_CATEGORIES = ["training_kit", "certification", "onboarding_equipment"]
 RECIPIENT_TYPES = ["client", "candidate", "consultant", "support_agent"]
-ROLES = ["admin", "recruiter", "client", "candidate", "user"]
+# v1.1.0: "manager" added — it is a real role of the API (api/schemas.py Role)
+# that the v1.0.0 plan missed; recruiter/client/candidate are planned roles.
+ROLES = ["admin", "manager", "recruiter", "client", "candidate", "user"]
 
 FRONTEND_ROUTES = [
     "/", "/login", "/register", "/account/profile",
@@ -153,6 +158,8 @@ def event(**kw):
     kw.setdefault("throttle", None)
     kw.setdefault("auth", True)
     kw.setdefault("rules", [])
+    kw.setdefault("version", "1.0.0")
+    kw.setdefault("extra_sources", [])
     E.append(kw)
 
 
@@ -740,6 +747,33 @@ event(
 
 
 # --------------------------------------------------------------------------
+# Captura en el frontend (proyecto "Captura", v1.1.0)
+# --------------------------------------------------------------------------
+# The capture project requires business events to be captured in the
+# backoffice through track(). To avoid duplicates they are emitted ONLY by
+# the frontend, once the API has confirmed the operation (2xx) and with the
+# values the API returns. Adding "frontend_backoffice" to the allowed sources
+# is a minor change (telemetry-plan.md §4.4) → 1.1.0.
+
+FRONTEND_CAPTURE = {
+    "inbound_order_created": "`talent-order-form.tsx` → tras la respuesta **201** de `POST /inventory/orders/inbound`. `order_id`, `stock_after`, `unit_cost` y `supplier_id` salen de esa respuesta; `office`, `product_category` y `programme_id`, del producto.",
+    "outbound_order_created": "`talent-order-form.tsx` → tras la respuesta **201** de `POST /inventory/orders/outbound` (`order_id`, `stock_after` y `recipient_type` de la respuesta).",
+    "stock_threshold_triggered": "`talent-order-form.tsx` → tras la respuesta 201 de una salida con `threshold_triggered: true`. El backend decide el cruce (`stock_before >= min_stock > stock_after`) y el frontend no recalcula nada.",
+    "direct_stock_edit_rejected": "`backoffice/inventory/products/page.tsx` → la acción *Corregir stock* envía `PATCH /inventory/products/{product_id}/stock`; el API responde **405** y se emite el evento (`attempt_channel=stock_endpoint_write`).",
+    "kit_cost_variance_detected": "`talent-order-form.tsx` → tras la respuesta 201 de una entrada cuyo cuerpo trae `cost_variance` (baseline calculado por el backend sobre el histórico del mismo producto y proveedor).",
+    "outbound_order_rejected": "`talent-order-form.tsx` → respuesta **400** por stock insuficiente (`stock_available` = el stock consultado al elegir el producto).",
+    "order_validation_failed": "`talent-order-form.tsx` → validación local al pulsar *Registrar* (`validation_layer=client`) o respuesta **422** del API (`server`, con los nombres de campo de `detail[].loc` y los tipos de `detail[].type`).",
+}
+for _ev in E:
+    if _ev["event_type"] in FRONTEND_CAPTURE:
+        _ev["extra_sources"] = ["frontend_backoffice"]
+        _ev["version"] = "1.1.0"
+        _ev["trigger"] += " **Captura (v1.1.0):** lo emite el backoffice con `track()`: " + FRONTEND_CAPTURE[_ev["event_type"]]
+    elif any(p["name"] == "user_role" for p in _ev["properties"]):
+        _ev["version"] = "1.1.0"  # ROLES gained "manager"
+
+
+# --------------------------------------------------------------------------
 # Builders
 # --------------------------------------------------------------------------
 
@@ -808,13 +842,13 @@ def sources_of(ev):
     """Events emitted by both frontends accept either source."""
     if ev["event_type"] in MULTI_SOURCE:
         return ["frontend_backoffice", "frontend_website"]
-    return [ev["source"]]
+    return [ev["source"], *ev["extra_sources"]]
 
 
 def event_schema(ev):
     envelope_overrides = {
         "event_type": {"const": ev["event_type"]},
-        "schemaVersion": {"const": "1.0.0"},
+        "schemaVersion": {"const": ev["version"]},
         "context": {"properties": {"source": {"enum": sources_of(ev)}}},
         "properties": properties_schema(ev),
     }
@@ -828,6 +862,7 @@ def event_schema(ev):
         "title": ev["event_type"],
         "description": ev["description"],
         "x-origin": ev["origin"],
+        "x-schema-version": ev["version"],
         "x-category": ev["category"],
         "x-source": sources_of(ev),
         "x-trigger": ev["trigger"],
@@ -855,7 +890,7 @@ def example(ev):
         "sessionId": None if (job or source == "backend_api" and not ev["auth"]) else "6f1d2c3b-4a5e-4f60-8b7a-9c8d7e6f5a4b",
         "userId": "2c5ea4c0-4067-4a9b-8f3e-1d2c3b4a5f6e" if ev["auth"] else None,
         "event_type": ev["event_type"],
-        "schemaVersion": "1.0.0",
+        "schemaVersion": ev["version"],
         "requestId": "8e7d6c5b-4a39-4b28-9c17-0f1e2d3c4b5a",
         "context": {"source": source, "environment": "production", "appVersion": "e272808"},
         "properties": ev["example_props"],
@@ -919,6 +954,7 @@ def build_md():
             out.append(f"| Campo | Valor |\n|---|---|")
             out.append(f"| Origen | {'**Obligatorio** (BRIEFING)' if origin == 'mandatory' else 'Oportunidad identificada'} |")
             out.append(f"| Categoría | `{ev['category']}` |")
+            out.append(f"| `schemaVersion` | `{ev['version']}` |")
             out.append(f"| Emisor (`context.source`) | {' o '.join('`'+x+'`' for x in sources_of(ev))} |")
             out.append(f"| `userId` / `sessionId` | {'obligatorios (no null)' if ev['auth'] and ev['source'] != 'backend_job' else ('null (job)' if ev['source'] == 'backend_job' else 'pueden ser null (evento anónimo o de sistema)')} |")
             out.append(f"| Descripción | {ev['description']} |")
@@ -937,6 +973,59 @@ def build_md():
             out.append("```json\n" + json.dumps(example(ev), ensure_ascii=False, indent=2) + "\n```\n</details>\n")
     out.append(END)
     return "\n".join(out)
+
+
+# --------------------------------------------------------------------------
+# TypeScript contract for the backoffice TelemetryService
+# --------------------------------------------------------------------------
+
+def build_ts():
+    def arr(values):
+        return "[" + ", ".join(json.dumps(v, ensure_ascii=False) for v in values) + "]"
+
+    lines = [
+        "// GENERATED by docs/telemetry/tools/build_schemas.py from the same source as",
+        "// docs/telemetry/event-schemas.json — do not edit by hand (CI: --check).",
+        "// Used by src/services/telemetry.ts to validate every event BEFORE sending it",
+        "// (fail-closed allowlist, docs/telemetry/telemetry-plan.md §4.3).",
+        "",
+        f"export const ENVELOPE_VERSION = {json.dumps(ENVELOPE_VERSION)};",
+        "",
+        "/** schemaVersion of each event_type (shared constant; never passed by callers). */",
+        "export const SCHEMA_VERSIONS = {",
+        *[f"  {ev['event_type']}: {json.dumps(ev['version'])}," for ev in E],
+        "} as const;",
+        "",
+        "export type TelemetryEventType = keyof typeof SCHEMA_VERSIONS;",
+        "",
+        "/** Allowlist: the ONLY property keys an event may carry. */",
+        "export const ALLOWED_PROPERTIES: Record<TelemetryEventType, readonly string[]> = {",
+        *[f"  {ev['event_type']}: {arr([p['name'] for p in ev['properties']])}," for ev in E],
+        "};",
+        "",
+        "/** Properties that must be present. */",
+        "export const REQUIRED_PROPERTIES: Record<TelemetryEventType, readonly string[]> = {",
+        *[f"  {ev['event_type']}: {arr([p['name'] for p in ev['properties'] if p['required']])}," for ev in E],
+        "};",
+        "",
+        "/** Emitters allowed for each event (context.source). */",
+        "export const ALLOWED_SOURCES: Record<TelemetryEventType, readonly string[]> = {",
+        *[f"  {ev['event_type']}: {arr(sources_of(ev))}," for ev in E],
+        "};",
+        "",
+        "/** Events whose envelope requires a non-null userId and sessionId. */",
+        f"export const REQUIRES_AUTHENTICATED_USER: readonly TelemetryEventType[] = {arr([ev['event_type'] for ev in E if ev['auth'] and ev['source'] != 'backend_job'])};",
+        "",
+        "/** Allowed values of `route` / `page_route` (path templates, no ids, no query). */",
+        f"export const FRONTEND_ROUTES = {arr(FRONTEND_ROUTES)} as const;",
+        "export type FrontendRoute = (typeof FRONTEND_ROUTES)[number];",
+        "",
+        "/** Allowed values of `endpoint` (API path templates). */",
+        f"export const API_ROUTES = {arr(API_ROUTES)} as const;",
+        "export type ApiRoute = (typeof API_ROUTES)[number];",
+        "",
+    ]
+    return "\n".join(lines)
 
 
 # --------------------------------------------------------------------------
@@ -984,6 +1073,7 @@ def main():
     schema = build_schema()
     count = validate(schema)
     schema_text = json.dumps(schema, ensure_ascii=False, indent=2) + "\n"
+    ts_text = build_ts()
     plan = PLAN_PATH.read_text(encoding="utf-8")
     if BEGIN not in plan or END not in plan:
         sys.exit(f"Faltan los marcadores {BEGIN!r} / {END!r} en {PLAN_PATH}")
@@ -991,8 +1081,8 @@ def main():
 
     if args.check:
         stale = []
-        for path in (SCHEMA_PATH, SERVICE_SCHEMA_PATH):
-            if not path.exists() or path.read_text(encoding="utf-8") != schema_text:
+        for path, text in ((SCHEMA_PATH, schema_text), (SERVICE_SCHEMA_PATH, schema_text), (TS_CONTRACT_PATH, ts_text)):
+            if not path.exists() or path.read_text(encoding="utf-8") != text:
                 stale.append(str(path))
         if plan != new_plan:
             stale.append(str(PLAN_PATH))
@@ -1002,6 +1092,8 @@ def main():
         SCHEMA_PATH.write_text(schema_text, encoding="utf-8")
         SERVICE_SCHEMA_PATH.parent.mkdir(parents=True, exist_ok=True)
         SERVICE_SCHEMA_PATH.write_text(schema_text, encoding="utf-8")
+        TS_CONTRACT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        TS_CONTRACT_PATH.write_text(ts_text, encoding="utf-8")
         PLAN_PATH.write_text(new_plan, encoding="utf-8")
     by_cat = {}
     for e in E:

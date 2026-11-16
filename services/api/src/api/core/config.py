@@ -24,6 +24,15 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="TELEMETRY_HASH_PEPPER",
     )
+    telemetry_endpoint: str = Field(
+        default="http://localhost:8000/telemetry/events",
+        validation_alias="TELEMETRY_ENDPOINT",
+    )
+    cost_variance_threshold_pct: float = Field(
+        default=10.0,
+        gt=0,
+        validation_alias="COST_VARIANCE_THRESHOLD_PCT",
+    )
     cache_enabled: bool = Field(
         default=True,
         validation_alias="CACHE_ENABLED",

@@ -1,10 +1,15 @@
 """Business logic for Nexova inventory management."""
 
-from sqlmodel import Session, func, select
+from datetime import UTC, datetime, timedelta
+
+from sqlmodel import Session, col, func, select
+
+from api.core.config import get_settings
 
 from api.inventory.cache import invalidate_products, invalidate_stock_and_orders
 from api.inventory.models import TalentAsset, TalentEntry, TalentExit
 from api.inventory.schemas import (
+    CostVariance,
     OrderPublic,
     TalentAssetCreate,
     TalentAssetPublic,
@@ -12,7 +17,15 @@ from api.inventory.schemas import (
     TalentEntryPublic,
     TalentExitCreate,
     TalentExitPublic,
+    currency_for,
 )
+
+# kit_cost_variance_detected (telemetry-plan.md A.5): baseline = mean unit cost
+# of the last 5 inbound orders of the same product + supplier in 365 days,
+# excluding the current one; at least 3 orders are needed to compare.
+COST_BASELINE_MAX = 5
+COST_BASELINE_MIN = 3
+COST_BASELINE_DAYS = 365
 
 
 # ---------------------------------------------------------------------------
@@ -45,10 +58,15 @@ def _asset_to_public(asset: TalentAsset, stock: int) -> TalentAssetPublic:
     return TalentAssetPublic(
         id=asset.id,
         name=asset.name,
-        skill_category=asset.skill_category,
-        country=asset.country,
+        office=asset.office,
+        product_category=asset.product_category,
+        programme_id=asset.programme_id,
+        currency=currency_for(asset.office),
+        min_stock=asset.min_stock,
         description=asset.description,
         current_stock=stock,
+        skill_category=asset.skill_category or "",
+        country=asset.country or "",
     )
 
 
@@ -78,13 +96,53 @@ def create_asset(session: Session, data: TalentAssetCreate) -> TalentAssetPublic
 # TalentEntry (inbound)
 # ---------------------------------------------------------------------------
 
+def _cost_variance(session: Session, data: TalentEntryCreate) -> CostVariance | None:
+    """Compare the new unit cost with the history of the same product and
+    supplier. Same product ⇒ same office ⇒ same currency: no conversion."""
+    since = datetime.now(UTC) - timedelta(days=COST_BASELINE_DAYS)
+    history = session.exec(
+        select(TalentEntry.unit_cost)
+        .where(
+            TalentEntry.talent_asset_id == data.talent_asset_id,
+            TalentEntry.supplier_id == data.supplier_id,
+            col(TalentEntry.unit_cost).is_not(None),
+            TalentEntry.created_at >= since,
+        )
+        .order_by(col(TalentEntry.created_at).desc())
+        .limit(COST_BASELINE_MAX)
+    ).all()
+    if len(history) < COST_BASELINE_MIN:
+        return None
+    baseline = sum(history) / len(history)
+    if baseline <= 0:
+        return None
+    variance = (data.unit_cost - baseline) / baseline * 100
+    threshold = get_settings().cost_variance_threshold_pct
+    if abs(variance) <= threshold:
+        return None
+    return CostVariance(
+        baseline_unit_cost=round(baseline, 2),
+        variance_pct=round(variance, 2),
+        direction="increase" if variance > 0 else "decrease",
+        threshold_pct=threshold,
+        baseline_sample_size=len(history),
+    )
+
+
 def create_entry(session: Session, data: TalentEntryCreate, user_uuid: str) -> TalentEntryPublic:
+    asset = session.get(TalentAsset, data.talent_asset_id)
+    if asset is None:
+        raise LookupError("Talent asset not found")
+    variance = _cost_variance(session, data)  # before inserting: excludes this order
     entry = TalentEntry(**data.model_dump(), user_uuid=user_uuid)
     session.add(entry)
     session.commit()
     session.refresh(entry)
     invalidate_stock_and_orders()
-    return TalentEntryPublic.model_validate(entry, from_attributes=True)
+    result = TalentEntryPublic.model_validate(entry, from_attributes=True)
+    result.stock_after = _compute_stock(session, asset.id, asset.country)
+    result.cost_variance = variance
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -111,7 +169,14 @@ def create_exit(session: Session, data: TalentExitCreate, user_uuid: str) -> Tal
     session.commit()
     session.refresh(exit_)
     invalidate_stock_and_orders()
-    return TalentExitPublic.model_validate(exit_, from_attributes=True)
+    result = TalentExitPublic.model_validate(exit_, from_attributes=True)
+    result.stock_before = current_stock
+    result.stock_after = current_stock - data.quantity
+    result.min_stock = asset.min_stock
+    # Edge-triggered (telemetry-plan.md §5.3): only when this order crosses
+    # the minimum, not on every order while stock stays below it.
+    result.threshold_triggered = current_stock >= asset.min_stock > result.stock_after
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -129,40 +194,24 @@ def list_orders(session: Session) -> list[OrderPublic]:
 
     orders: list[OrderPublic] = []
 
-    def _asset_info(asset_id: str) -> tuple[str, str, str]:
-        asset = asset_map.get(asset_id)
-        if asset:
-            return (asset.name, asset.skill_category, asset.country)
-        return ("Unknown", "", "")
+    def _order(row: TalentEntry | TalentExit, order_type: str) -> OrderPublic:
+        asset = asset_map.get(row.talent_asset_id)
+        return OrderPublic(
+            id=row.id,
+            type=order_type,
+            talent_asset_id=row.talent_asset_id,
+            talent_asset_name=asset.name if asset else "Unknown",
+            office=asset.office if asset else "",
+            programme_id=asset.programme_id if asset else "",
+            product_category=asset.product_category if asset else "",
+            skill_category=(asset.skill_category or "") if asset else "",
+            country=(asset.country or "") if asset else "",
+            quantity=row.quantity,
+            notes=row.notes,
+            created_at=row.created_at,
+            user_uuid=row.user_uuid,
+        )
 
-    for e in entries:
-        name, skill, country = _asset_info(e.talent_asset_id)
-        orders.append(OrderPublic(
-            id=e.id,
-            type="inbound",
-            talent_asset_id=e.talent_asset_id,
-            talent_asset_name=name,
-            skill_category=skill,
-            country=country,
-            quantity=e.quantity,
-            notes=e.notes,
-            created_at=e.created_at,
-            user_uuid=e.user_uuid,
-        ))
-
-    for ex in exits:
-        name, skill, country = _asset_info(ex.talent_asset_id)
-        orders.append(OrderPublic(
-            id=ex.id,
-            type="outbound",
-            talent_asset_id=ex.talent_asset_id,
-            talent_asset_name=name,
-            skill_category=skill,
-            country=country,
-            quantity=ex.quantity,
-            notes=ex.notes,
-            created_at=ex.created_at,
-            user_uuid=ex.user_uuid,
-        ))
-
+    orders.extend(_order(e, "inbound") for e in entries)
+    orders.extend(_order(ex, "outbound") for ex in exits)
     return orders

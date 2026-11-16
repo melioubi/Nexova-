@@ -85,6 +85,28 @@ def get_product(
     return result
 
 
+@router.api_route("/products/{asset_id}/stock", methods=["PUT", "PATCH", "DELETE"])
+def reject_direct_stock_edit(
+    asset_id: str,
+    session: DbSession,
+    current_user: CurrentUser,
+) -> None:
+    """Stock is never modified directly (nexova-BRIEFING §6): every change goes
+    through an inbound or outbound order traceable to a user.
+
+    This route exists only to reject such attempts explicitly (405) instead
+    of a generic 404, so they can be measured as ``direct_stock_edit_rejected``
+    (telemetry-plan.md §3.3).
+    """
+    if service.get_asset(session, asset_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Talent asset not found")
+    raise HTTPException(
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+        detail="El stock no se modifica directamente: registra una orden de entrada o de salida.",
+        headers={"Allow": ""},
+    )
+
+
 # ---------------------------------------------------------------------------
 # Orders — inbound / outbound
 # ---------------------------------------------------------------------------
@@ -99,8 +121,15 @@ def create_inbound_order(
     session: DbSession,
     current_user: CurrentUser,
 ) -> schemas.TalentEntryPublic:
-    """Register an inbound order (adds stock). Requires authentication."""
-    return service.create_entry(session, data, current_user["id"])
+    """Register an inbound order (adds stock). Requires authentication.
+
+    The response includes ``stock_after`` and, when the unit cost deviates
+    from the product+supplier history, ``cost_variance``.
+    """
+    try:
+        return service.create_entry(session, data, current_user["id"])
+    except LookupError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Talent asset not found")
 
 
 @router.post(

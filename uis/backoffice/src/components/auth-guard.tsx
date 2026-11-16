@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getToken } from "@/lib/auth";
+import { getToken, type SessionExpiryTrigger } from "@/lib/auth";
+import { hasUnsavedForm } from "@/lib/form-state";
+import { track } from "@/services/telemetry";
+import { frontendRoute } from "@/services/telemetry-routes";
+import { sessionAgeMinutes } from "@/services/telemetry-session";
 import { getMyProfile } from "@/lib/api";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -21,7 +25,21 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   useEffect(() => {
-    const handleExpiredSession = () => router.replace("/login");
+    // session_expired (plan A.16) is captured here, in the auth component,
+    // not in each page: every expiry in the backoffice goes through this event.
+    const handleExpiredSession = (event: Event) => {
+      const trigger = (event as CustomEvent<SessionExpiryTrigger>).detail ?? "api_401";
+      const route = frontendRoute(window.location.pathname);
+      if (route) {
+        track("session_expired", {
+          route,
+          trigger,
+          session_age_minutes: sessionAgeMinutes(),
+          had_unsaved_form: hasUnsavedForm(),
+        });
+      }
+      router.replace("/login");
+    };
     window.addEventListener("nexova:session-expired", handleExpiredSession);
     return () => window.removeEventListener("nexova:session-expired", handleExpiredSession);
   }, [router]);
